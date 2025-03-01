@@ -15,10 +15,16 @@ class HomePage extends StatefulWidget {
 }
 
 class HomePageState extends State<HomePage> {
-  //placeholder announcements
+  //announcements and classes
   late List<AnnouncementData> announcements;
   List<String> selectedClasses = [];
   late List<String> availableClasses;
+  
+  //filter category
+  bool showCompleted = true;
+  bool showUncompleted = true;
+  bool showPersonal = true;
+  bool showPublic = true;
 
   HomePageState() {
     announcements = getAnnouncementsPlaceholder();
@@ -47,7 +53,7 @@ class HomePageState extends State<HomePage> {
   }
 
   Future<bool> addAnnouncement(String title, String clazz, DateTime due, String author, String description, int uuid, bool isPublic) async {
-    var data = AnnouncementData(title, clazz, due, author, description, uuid);
+    var data = AnnouncementData(title, clazz, due, author, description, uuid, isPublic);
 
     if (!await sendAnnouncementToServer(data, isPublic)) {
         return false;
@@ -79,6 +85,60 @@ class HomePageState extends State<HomePage> {
     );
   }
 
+  void showFilterPopup(context) {
+    showDialog(context: context, builder: (BuildContext context) {
+      final theme = Theme.of(context);
+      return AlertDialog(
+        scrollable: true,
+        title: const Text("Filter Announcements"),
+        titleTextStyle: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, letterSpacing: 1.5, fontSize: 30.0),
+        content: StatefulBuilder(builder: (context, setState) => Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Form(
+            child: Table(
+              columnWidths: { 0: FlexColumnWidth(), 1: FlexColumnWidth(0.2) },
+              children: [
+                TableRow(children: [
+                  Text("Show Completed", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20.0)),
+                  Checkbox(checkColor: Colors.white, value: showCompleted,
+                    onChanged: (bool? value) { setState(() { showCompleted = value!; }); },
+                  ),
+                ]),
+                TableRow(children: [
+                  Text("Show Uncompleted", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20.0)),
+                  Checkbox(checkColor: Colors.white, value: showUncompleted,
+                    onChanged: (bool? value) { setState(() { showUncompleted = value!; }); },
+                  ),
+                ]),
+                TableRow(children: [
+                  Text("Show Personal", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20.0)),
+                  Checkbox(checkColor: Colors.white, value: showPersonal,
+                    onChanged: (bool? value) { setState(() { showPersonal = value!; }); },
+                  ),
+                ]),
+                TableRow(children: [
+                  Text("Show Public", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20.0)),
+                  Checkbox(checkColor: Colors.white, value: showPublic,
+                    onChanged: (bool? value) { setState(() { showPublic = value!; }); },
+                  ),
+                ])
+              ]
+            )
+          )
+        )),
+        actions: [
+          ElevatedButton(
+            child: const Text("Filter"),
+            onPressed: () {
+              setState((){});
+              Navigator.pop(context);
+            },
+          ),
+        ],
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -95,6 +155,14 @@ class HomePageState extends State<HomePage> {
         padding: EdgeInsets.all(16.0),
         child: Column(
           children: [
+            IconButton(
+              icon: Icon(Icons.filter_alt_outlined),
+              tooltip: "Pick a filter to categorise the announcements.",
+              onPressed: () => showFilterPopup(context),
+            ),
+
+            Divider(),
+
             Expanded(
               child: announcements.isEmpty
                   ? Center(
@@ -110,6 +178,14 @@ class HomePageState extends State<HomePage> {
                             !selectedClasses.contains(announcements[index].getClass())) {
                           return SizedBox();
                         }
+
+                        if ((!showCompleted && announcements[index].isCompleted()) ||
+                            (!showUncompleted && !announcements[index].isCompleted()) ||
+                            (!showPersonal && !announcements[index].isPublic()) ||
+                            (!showPublic && announcements[index].isPublic())) {
+                          return SizedBox();
+                        }
+
                         return Card(
                           child: InkWell(
                             borderRadius: BorderRadius.circular(12),
@@ -130,10 +206,8 @@ class HomePageState extends State<HomePage> {
                                               fontWeight: FontWeight.bold),
                                         ),
                                         SizedBox(height: 8),
-                                        Text(
-                                            "Posted by: ${announcements[index].getAuthor()}"),
-                                        Text(
-                                            "Due: ${announcements[index].getDue()}"),
+                                        Text("Posted by: ${announcements[index].getAuthor()}"),
+                                        Text("Due: ${announcements[index].getDue()}"),
                                         SizedBox(height: 12),
                                         Text("Description:"),
                                         SizedBox(height: 4),
@@ -142,10 +216,47 @@ class HomePageState extends State<HomePage> {
                                     ),
                                     actions: [
                                       TextButton(
-                                        onPressed: () {
+                                        onPressed: () async {
+                                          if (!announcements[index].isCompleted()) {
+                                            if (await announcements[index].complete()) {
+                                              if (context.mounted) {
+                                                Navigator.pop(context);
+                                                showSnackBar(context, "Announcement Completed. (\"${announcements[index].getTitle()}\")");
+                                              }
+
+                                              setState(() => announcements.sort(AnnouncementData.sortFunction));
+                                            } else {
+                                              if (context.mounted) {
+                                                showSnackBar(context, "Failed to sync announcement completion with the server. (Try checking your internet connection)");
+                                              }
+                                            }
+                                          }
+                                        },
+                                        style: announcements[index].isCompleted() ?
+                                          ButtonStyle(
+                                            overlayColor: WidgetStateProperty.all(Colors.transparent),
+                                            mouseCursor: DefaultMouseCursor(),
+                                          ) : null,
+                                        child: Text(announcements[index].isCompleted() ? "Completed" : "Complete", style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: announcements[index].isCompleted() ? Colors.grey : Colors.green
+                                        )),
+                                      ),
+                                      TextButton(
+                                        onPressed: () async {
                                           if (announcements[index].getAuthorUUID() == account.uuid) {
-                                            Navigator.pop(context);
-                                            removeAnnouncement(announcements[index]);
+                                            if (await deleteAnnouncementFromServer(announcements[index])) {
+                                              if (context.mounted) {
+                                                Navigator.pop(context);
+                                                showSnackBar(context, "Successfully deleted announcement. (\"${announcements[index].getTitle()}\")");
+                                              }
+
+                                              removeAnnouncement(announcements[index]);
+                                            } else {
+                                              if (context.mounted) {
+                                                showSnackBar(context, "Failed to delete announcement. (Try checking your internet connection)");
+                                              }
+                                            }
                                           }
                                         },
                                         style: announcements[index].getAuthorUUID() != account.uuid ?
@@ -181,33 +292,38 @@ class HomePageState extends State<HomePage> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       Expanded(
-                                        child: Text(
-                                          announcements[index].getTitle(),
-                                          style: theme.textTheme.titleMedium
-                                              ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
+                                        child: Row(children: [
+                                          announcements[index].isCompleted() ? Icon(Icons.check_box, color: Colors.lightGreen) : SizedBox(),
+                                          Text(
+                                            announcements[index].getTitle(),
+                                            style: theme.textTheme.titleMedium?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: announcements[index].isCompleted() ? Colors.grey : null
+                                            ),
+                                          )
+                                        ])
                                       ),
                                       Container(
                                         padding: EdgeInsets.symmetric(
                                             horizontal: 12, vertical: 6),
                                         decoration: BoxDecoration(
-                                          color: announcements[index].getDaysToDue() < 0 ? Color.fromRGBO(175, 6, 6, 1) :
-                                                theme.primaryColor.withAlpha((0.2 * 255).toInt()),
+                                          color: announcements[index].isCompleted() ? Color.fromRGBO(50, 50, 50, 0.5) : (
+                                            announcements[index].getDaysToDue() < 0 ? Color.fromRGBO(175, 6, 6, 1) :
+                                                theme.primaryColor.withAlpha((0.2 * 255).toInt())),
                                           borderRadius: BorderRadius.circular(12),
                                         ),
                                         child: Text(
                                           "Due: ${announcements[index].getDue()}", 
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: switch (announcements[index].getDaysToDue()) {
-                                              0 => Color.fromRGBO(255, 0, 0, 1),
-                                              1 || 2 => Colors.orange,
-                                              3 => Colors.yellow,
-                                              4 => Colors.lime,
-                                              var x => x < 0 ? Color.fromRGBO(255, 120, 120, 1) : Colors.green
-                                            },
+                                            color: announcements[index].isCompleted() ? Color.fromRGBO(125, 125, 125, 0.5) :
+                                              switch (announcements[index].getDaysToDue()) {
+                                                0 => Color.fromRGBO(255, 0, 0, 1),
+                                                1 || 2 => Colors.orange,
+                                                3 => Colors.yellow,
+                                                4 => Colors.lime,
+                                                var x => x < 0 ? Color.fromRGBO(255, 120, 120, 1) : Colors.green
+                                              },
                                           ),
                                         ),
                                       ),

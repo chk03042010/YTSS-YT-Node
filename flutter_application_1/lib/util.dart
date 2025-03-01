@@ -6,6 +6,8 @@ import 'dart:typed_data';
 import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/main.dart';
+import 'package:flutter_application_1/network.dart';
 
 class Account {
   String name, email;
@@ -48,6 +50,8 @@ class AnnouncementData {
   
   String _title, _clazz, _author, _desc;
   DateTime _due;
+  bool _isCompleted = false;
+  final bool _isPublic;
 
   late Digest _checksum; //SHA-256
 
@@ -72,24 +76,40 @@ class AnnouncementData {
     _checksum = output.events.single;
   }
 
-  AnnouncementData(String title, String clazz, DateTime due, String author, String description, int authorUUID) :
-      _title = title, _clazz = clazz, _due = due, _author = author, _desc = description, _authorUUID = authorUUID,
+  AnnouncementData(String title, String clazz, DateTime due, String author,
+                  String description, int authorUUID, bool isPublic) :
+      _title = title, _clazz = clazz, _due = due, _author = author,
+      _desc = description, _authorUUID = authorUUID, _isPublic = isPublic,
       _id = DateTime.now().microsecondsSinceEpoch {
     _calcChecksum();
+
+    var completed = prefs?.getBool("announcement_completion_$_checksum");
+    if (completed != null && completed) {
+      _isCompleted = true;
+    } else {
+      prefs?.setBool("announcement_completion_$_checksum", false);
+    }
   }
 
-  void setTitle(String title) { _title = title; _calcChecksum(); }
+  void setTitle(String title) { _title = "$title${_isPublic ? "" : " (Personal)"}"; _calcChecksum(); }
   void setClass(String clazz) { _clazz = clazz; _calcChecksum(); }
   void setAuthor(String author) { _author = author; _calcChecksum(); }
   void setDue(DateTime due) { _due = due; _calcChecksum(); }
   void setDesc(String desc) { _desc = desc; _calcChecksum(); }
+  Future<bool> complete() async {
+    _isCompleted = true;
+    await prefs?.setBool("announcement_completion_$_checksum", true);
+    return await completeAnnouncementInServer(this);
+  }
 
   int getAuthorUUID() { return _authorUUID; }
   String getTitle() { return _title; }
   String getClass() { return _clazz; }
-  String getAuthor() { return _author; }
+  String getAuthor() { return _authorUUID == account.uuid ? "You" : _author; }
   String getDue() { return dateFormatDateTime(_due); }
   String getDesc() { return _desc; }
+  bool isCompleted() { return _isCompleted; }
+  bool isPublic() { return _isPublic; }
 
   int getDaysToDue() {
     return _due.difference(DateTime.now()).inDays;
@@ -109,6 +129,12 @@ class AnnouncementData {
   }
 
   static int sortFunction(AnnouncementData a, AnnouncementData b) {
+    if (a.isCompleted() && !b.isCompleted()) {
+      return 1;
+    } else if (!a.isCompleted() && b.isCompleted()) {
+      return -1;
+    }
+
     return a._due.millisecondsSinceEpoch - b._due.millisecondsSinceEpoch;
   }
   

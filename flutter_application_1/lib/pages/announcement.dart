@@ -110,6 +110,8 @@ class AddAnnouncementPageState extends State<AddAnnouncementPage> {
 
               Divider(),
 
+              Row(children: [Text("Would you like to make this announcement public so that everyone in the class can view it?")]),
+
               Row(
                 children: [
                   Checkbox(
@@ -151,7 +153,8 @@ class AddAnnouncementPageState extends State<AddAnnouncementPage> {
                         }
                       } else {
                         if (context.mounted) {
-                          showSnackBar(context, isPublic ? "Failed to send announcement to the server!" : "Failed to sync personal announcement with account.");
+                          showSnackBar(context, isPublic ? "Failed to send announcement to the server. (Try checking your internet connection)" :
+                                                            "Failed to sync personal announcement with account. (Try checking your internet connection)");
                         }
                       }
                     }

@@ -13,7 +13,8 @@ List<AnnouncementData> getAnnouncementsPlaceholder() {
       DateTime(2025, 2, 28),
       "Mr. Johnson",
       "Prepare for calculus test on derivatives and integrals.",
-      1
+      1,
+      false
     ),
     AnnouncementData(
       "English Essay",
@@ -21,7 +22,8 @@ List<AnnouncementData> getAnnouncementsPlaceholder() {
       DateTime(2025, 3, 3),
       "Ms. Williams",
       "Write a 500-word essay on Shakespeare's Hamlet.",
-      2
+      2,
+      false
     ),
     AnnouncementData(
       "Physics Lab",
@@ -29,7 +31,8 @@ List<AnnouncementData> getAnnouncementsPlaceholder() {
       DateTime(2025, 3, 25),
       "Dr. Smith",
       "Prepare for lab on momentum and collisions.",
-      3
+      3,
+      false
     ),
     AnnouncementData(
       "History Project",
@@ -37,7 +40,8 @@ List<AnnouncementData> getAnnouncementsPlaceholder() {
       DateTime(2025, 3, 10),
       "Mrs. Davis",
       "Complete research project on World War II.",
-      account.uuid
+      account.uuid,
+      false
     ),
     AnnouncementData(
       "Chemistry Quiz",
@@ -45,7 +49,8 @@ List<AnnouncementData> getAnnouncementsPlaceholder() {
       DateTime(2025, 3, 1),
       "Dr. Wilson",
       "Study periodic table and chemical bonding for quiz.",
-      account.uuid
+      account.uuid,
+      false
     ),
     AnnouncementData(
       "Art Exhibition",
@@ -53,7 +58,8 @@ List<AnnouncementData> getAnnouncementsPlaceholder() {
       DateTime(2025, 3, 15),
       "Ms. Thompson",
       "Prepare your portfolio for the spring exhibition.",
-      account.uuid
+      account.uuid,
+      false
     ),
     AnnouncementData(
       "Computer Science Project",
@@ -61,7 +67,8 @@ List<AnnouncementData> getAnnouncementsPlaceholder() {
       DateTime(2025, 3, 7),
       "Mr. Anderson",
       "Complete your programming assignment on data structures.",
-      account.uuid
+      account.uuid,
+      true
     ),
     AnnouncementData(
       "Music Recital",
@@ -69,7 +76,8 @@ List<AnnouncementData> getAnnouncementsPlaceholder() {
       DateTime(2025, 3, 20),
       "Mr. Lewis",
       "Practice your piece for the upcoming recital.",
-      account.uuid
+      account.uuid,
+      true
     ),
     AnnouncementData(
       "Biology Exam",
@@ -77,7 +85,8 @@ List<AnnouncementData> getAnnouncementsPlaceholder() {
       DateTime(2025, 3, 12),
       "Dr. Harris",
       "Study cell biology and genetics for midterm exam.",
-      account.uuid
+      account.uuid,
+      false
     ),
     AnnouncementData(
       "Physical Education",
@@ -85,7 +94,8 @@ List<AnnouncementData> getAnnouncementsPlaceholder() {
       DateTime(2025, 3, 2),
       "Coach Brown",
       "Bring appropriate gear for basketball tournament.",
-      account.uuid
+      account.uuid,
+      false
     ),
   ];
 }
