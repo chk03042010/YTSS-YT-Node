@@ -67,7 +67,7 @@ List<AnnouncementData> getAnnouncementsPlaceholder() {
       DateTime(2025, 3, 7),
       "Mr. Anderson",
       "Complete your programming assignment on data structures.",
-      account.uuid,
+      1,
       true
     ),
     AnnouncementData(

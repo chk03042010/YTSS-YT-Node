@@ -179,10 +179,10 @@ class HomePageState extends State<HomePage> {
                           return SizedBox();
                         }
 
-                        if ((!showCompleted && announcements[index].isCompleted()) ||
-                            (!showUncompleted && !announcements[index].isCompleted()) ||
-                            (!showPersonal && !announcements[index].isPublic()) ||
-                            (!showPublic && announcements[index].isPublic())) {
+                        if (!(((showCompleted && announcements[index].isCompleted()) ||
+                            (showUncompleted && !announcements[index].isCompleted())) &&
+                            ((showPersonal && !announcements[index].isPublic()) ||
+                            (showPublic && announcements[index].isPublic())))) {
                           return SizedBox();
                         }
 
