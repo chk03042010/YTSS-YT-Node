@@ -245,18 +245,38 @@ class HomePageState extends State<HomePage> {
                                       TextButton(
                                         onPressed: () async {
                                           if (announcements[index].getAuthorUUID() == account.uuid) {
-                                            if (await deleteAnnouncementFromServer(announcements[index])) {
-                                              if (context.mounted) {
-                                                Navigator.pop(context);
-                                                showSnackBar(context, "Successfully deleted announcement. (\"${announcements[index].getTitle()}\")");
-                                              }
+                                            showDialog(context: context, builder: (BuildContext context) {
+                                              final theme = Theme.of(context);
+                                              return AlertDialog(
+                                                title: Text("Are you sure you want to delete this announcement?"),
+                                                titleTextStyle: theme.textTheme.titleSmall,
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () => Navigator.pop(context),
+                                                    child: Text("Cancel"),
+                                                  ),
+                                                  ElevatedButton(
+                                                    onPressed: () async {
+                                                      if (await deleteAnnouncementFromServer(announcements[index])) {
+                                                        if (context.mounted) {
+                                                          Navigator.pop(context);
+                                                          Navigator.pop(context);
+                                                          showSnackBar(context, "Successfully deleted announcement. (\"${announcements[index].getTitle()}\")");
+                                                        }
 
-                                              removeAnnouncement(announcements[index]);
-                                            } else {
-                                              if (context.mounted) {
-                                                showSnackBar(context, "Failed to delete announcement. (Try checking your internet connection)");
-                                              }
-                                            }
+                                                        removeAnnouncement(announcements[index]);
+                                                      } else {
+                                                        if (context.mounted) {
+                                                          showSnackBar(context, "Failed to delete announcement. (Try checking your internet connection)");
+                                                        }
+                                                      }
+                                                    }, 
+                                                    style: ButtonStyle(backgroundColor: WidgetStatePropertyAll<Color>(Colors.red)),
+                                                    child: Text("Confirm"),
+                                                  ),
+                                                ],
+                                              );
+                                            });
                                           }
                                         },
                                         style: announcements[index].getAuthorUUID() != account.uuid ?
