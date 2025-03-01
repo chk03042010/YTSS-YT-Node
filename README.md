@@ -1,3 +1,3 @@
-### PLACEMENT OF FILES BEFORE PUSHING TO THE MAIN BRANCH ###
+### Welcome to YT Sync! ###
 
-Push any updates to this branch first. Before pushing into the main branch, create a pull request.
+Push any updates to the _premain_ branch. Before pushing into the _main_ branch, please create a merge pull request.
