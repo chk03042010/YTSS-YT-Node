@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_application_1/network.dart';
 import './settings.dart';
 import './placeholder.dart';
 import 'announcement.dart';
@@ -6,9 +8,7 @@ import '../util.dart';
 import '../main.dart';
 
 class HomePage extends StatefulWidget {
-  final Function(ThemeMode, {ThemeData? custom}) updateTheme;
-
-  const HomePage({super.key, required this.updateTheme});
+  const HomePage({super.key});
 
   @override
   HomePageState createState() => HomePageState();
@@ -16,9 +16,15 @@ class HomePage extends StatefulWidget {
 
 class HomePageState extends State<HomePage> {
   //placeholder announcements
-  List<Map<String, String>> announcements = getAnnouncementsPlaceholder();
+  late List<AnnouncementData> announcements;
   List<String> selectedClasses = [];
-  List<String> availableClasses = getClassesPlaceholder();
+  late List<String> availableClasses;
+
+  HomePageState() {
+    announcements = getAnnouncementsPlaceholder();
+    announcements.sort(AnnouncementData.sortFunction);
+    availableClasses = getClassesPlaceholder();
+  }
 
   void _toggleLogin(bool value) {
     setState(() { appState.isLoggedIn = value; });
@@ -40,20 +46,24 @@ class HomePageState extends State<HomePage> {
     });
   }
 
-  void _addAnnouncement(String title, String selectedClass, String dueDate,
-      String postedBy, String description) {
+  Future<bool> addAnnouncement(String title, String clazz, DateTime due, String author, String description, int uuid, bool isPublic) async {
+    var data = AnnouncementData(title, clazz, due, author, description, uuid);
+
+    if (!await sendAnnouncementToServer(data, isPublic)) {
+        return false;
+    }
+
     setState(() {
-      // Format the date before adding
-      String formattedDate = dateFormatString(dueDate);
-      
-      //TODO: lang
-      announcements.add({
-        "title": title, 
-        "class": selectedClass,
-        "due": formattedDate,
-        "postedBy": postedBy,
-        "description": description,
-      });
+      announcements.add(data);
+      announcements.sort(AnnouncementData.sortFunction);
+    });
+
+    return true;
+  }
+
+  void removeAnnouncement(AnnouncementData data) {
+    setState(() {
+      announcements.remove(data);
     });
   }
 
@@ -65,7 +75,6 @@ class HomePageState extends State<HomePage> {
         selectedClasses: selectedClasses,
         onClassToggle: _toggleClassSelection,
         onMultipleClassSelect: _setSelectedClasses,
-        updateTheme: widget.updateTheme,
       ),
     );
   }
@@ -77,7 +86,7 @@ class HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Announcements", //TODO: lang
+          "Announcements", 
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
@@ -90,7 +99,7 @@ class HomePageState extends State<HomePage> {
               child: announcements.isEmpty
                   ? Center(
                       child: Text(
-                        "No announcements to display", //TODO: lang
+                        "No announcements to display", 
                         style: theme.textTheme.titleMedium,
                       ),
                     )
@@ -98,8 +107,7 @@ class HomePageState extends State<HomePage> {
                       itemCount: announcements.length,
                       itemBuilder: (context, index) {
                         if (selectedClasses.isNotEmpty &&
-                            !selectedClasses
-                                .contains(announcements[index]["class"])) {
+                            !selectedClasses.contains(announcements[index].getClass())) {
                           return SizedBox();
                         }
                         return Card(
@@ -110,30 +118,46 @@ class HomePageState extends State<HomePage> {
                                 context: context,
                                 builder: (context) {
                                   return AlertDialog(
-                                    title: Text(announcements[index]["title"]!),
+                                    title: Text(announcements[index].getTitle()),
                                     content: Column(
                                       mainAxisSize: MainAxisSize.min,
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          "Class: ${announcements[index]["class"]!}",
+                                          "Class: ${announcements[index].getClass()}",
                                           style: TextStyle(
                                               fontWeight: FontWeight.bold),
                                         ),
                                         SizedBox(height: 8),
                                         Text(
-                                            "Posted by: ${announcements[index]["postedBy"]!}"),
+                                            "Posted by: ${announcements[index].getAuthor()}"),
                                         Text(
-                                            "Due: ${announcements[index]["due"]!}"),
+                                            "Due: ${announcements[index].getDue()}"),
                                         SizedBox(height: 12),
                                         Text("Description:"),
                                         SizedBox(height: 4),
-                                        Text(
-                                            announcements[index]["description"]!),
+                                        Text(announcements[index].getDesc()),
                                       ],
                                     ),
                                     actions: [
+                                      TextButton(
+                                        onPressed: () {
+                                          if (announcements[index].getAuthorUUID() == account.uuid) {
+                                            Navigator.pop(context);
+                                            removeAnnouncement(announcements[index]);
+                                          }
+                                        },
+                                        style: announcements[index].getAuthorUUID() != account.uuid ?
+                                          ButtonStyle(
+                                            overlayColor: WidgetStateProperty.all(Colors.transparent),
+                                            mouseCursor: DefaultMouseCursor(),
+                                          ) : null,
+                                        child: Text("Delete", style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: announcements[index].getAuthorUUID() == account.uuid ? Colors.red : Colors.grey
+                                        )),
+                                      ),
                                       TextButton(
                                         onPressed: () => Navigator.pop(context),
                                         child: Text("Close"),
@@ -146,6 +170,7 @@ class HomePageState extends State<HomePage> {
                                 },
                               );
                             },
+
                             child: Padding(
                               padding: EdgeInsets.all(12.0),
                               child: Column(
@@ -157,7 +182,7 @@ class HomePageState extends State<HomePage> {
                                     children: [
                                       Expanded(
                                         child: Text(
-                                          announcements[index]["title"]!,
+                                          announcements[index].getTitle(),
                                           style: theme.textTheme.titleMedium
                                               ?.copyWith(
                                             fontWeight: FontWeight.bold,
@@ -168,14 +193,21 @@ class HomePageState extends State<HomePage> {
                                         padding: EdgeInsets.symmetric(
                                             horizontal: 12, vertical: 6),
                                         decoration: BoxDecoration(
-                                          color: theme.primaryColor.withAlpha((0.2 * 255).toInt()),
+                                          color: announcements[index].getDaysToDue() < 0 ? Color.fromRGBO(175, 6, 6, 1) :
+                                                theme.primaryColor.withAlpha((0.2 * 255).toInt()),
                                           borderRadius: BorderRadius.circular(12),
                                         ),
                                         child: Text(
-                                          "Due: ${announcements[index]["due"]!}", //TODO: lang
+                                          "Due: ${announcements[index].getDue()}", 
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: theme.primaryColor,
+                                            color: switch (announcements[index].getDaysToDue()) {
+                                              0 => Color.fromRGBO(255, 0, 0, 1),
+                                              1 || 2 => Colors.orange,
+                                              3 => Colors.yellow,
+                                              4 => Colors.lime,
+                                              var x => x < 0 ? Color.fromRGBO(255, 120, 120, 1) : Colors.green
+                                            },
                                           ),
                                         ),
                                       ),
@@ -183,7 +215,7 @@ class HomePageState extends State<HomePage> {
                                   ),
                                   SizedBox(height: 8),
                                   Text(
-                                    announcements[index]["class"]!,
+                                    announcements[index].getClass(),
                                     style: theme.textTheme.bodyMedium?.copyWith(
                                       color: theme.colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
                                     ),
@@ -202,8 +234,8 @@ class HomePageState extends State<HomePage> {
 
       bottomNavigationBar: BottomNavigationBar(
         items: [
-          BottomNavigationBarItem(icon: Icon(Icons.add), label: "Add"), //TODO: lang
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Settings"), //TODO: lang
+          BottomNavigationBarItem(icon: Icon(Icons.add), label: "Add"), 
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Settings"), 
         ],
         onTap: (index) {
           if (index == 0) { // Add
@@ -212,7 +244,7 @@ class HomePageState extends State<HomePage> {
                 context,
                 MaterialPageRoute(
                     builder: (context) => AddAnnouncementPage(
-                        onAdd: _addAnnouncement,
+                        homePageState: this,
                         availableClasses: availableClasses,
                         selectedClasses: selectedClasses)),
               );
@@ -220,9 +252,9 @@ class HomePageState extends State<HomePage> {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: Text("Sign in Required"), //TODO: lang
+                  title: Text("Sign in Required"), 
                   content:
-                      Text("You need to be signed in to add announcements."), //TODO: lang
+                      Text("You need to be signed in to add announcements."), 
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
@@ -236,7 +268,7 @@ class HomePageState extends State<HomePage> {
                           getSettingsPageMaterial()
                         );
                       },
-                      child: Text("Go to Settings"), //TODO: lang
+                      child: Text("Go to Settings"), 
                     ),
                   ],
                   shape: RoundedRectangleBorder(

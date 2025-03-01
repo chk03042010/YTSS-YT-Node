@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/pages/placeholder.dart';
+import 'package:flutter_application_1/util.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'pages/homepage.dart';
 
 late MyAppState appState;
+SharedPreferences? prefs;
+late final Account account;
 
-void main() {
+void main() async {
+  prefs = await SharedPreferences.getInstance();
+  account = createAccount();
   runApp(MyApp());
 }
 
@@ -16,35 +23,75 @@ class MyApp extends StatefulWidget {
 }
 
 class MyAppState extends State<MyApp> {
-  ThemeMode themeMode = ThemeMode.light; //TODO: file-saving the theme.
-  ThemeData? customTheme;
+  late Map<String, (ThemeMode, ThemeData)> appThemeMap;
+  (ThemeMode, ThemeData) themeData = (ThemeMode.light, ThemeData.light());
   
-  bool isLoggedIn = false;
+  String selectedTheme = 'Light';
+  bool isLoggedIn = true;
 
   MyAppState() {
+    appThemeMap = {
+      "light": (ThemeMode.light, ThemeData(
+        primarySwatch: Colors.blue,
+        secondaryHeaderColor: Colors.blueAccent,
+        cardTheme: getCardTheme(),
+        inputDecorationTheme: getInputDecorationTheme(100),
+        elevatedButtonTheme: getElevatedButtonTheme(Colors.blue, Colors.white),
+        appBarTheme: getAppBarTheme(Colors.white, Colors.black)
+      )),
+      "dark": (ThemeMode.dark, ThemeData.dark().copyWith(
+        primaryColor: Colors.blueGrey,
+        cardTheme: getCardTheme(),
+        inputDecorationTheme: getInputDecorationTheme(800),
+        elevatedButtonTheme: getElevatedButtonTheme(Colors.blueGrey, Colors.white),
+        appBarTheme: getAppBarTheme(Colors.black, Colors.white)
+      )),
+      "pink": (ThemeMode.light, ThemeData(
+        primarySwatch: Colors.pink,
+        scaffoldBackgroundColor: Color(0xFFFEE5EC),
+        cardTheme: getCardTheme(),
+        elevatedButtonTheme: getElevatedButtonTheme(Colors.pink, Colors.white),
+        appBarTheme: getAppBarTheme(Colors.pink, Colors.white)
+      )),
+      "ytss": (ThemeMode.light, ThemeData(
+        primaryColor: Color(0xFF0A1958), // Navy blue
+        scaffoldBackgroundColor: Colors.white,
+        cardTheme: getCardTheme(),
+        elevatedButtonTheme: getElevatedButtonTheme(Color(0xFF0A1958), Color(0xFFFFC700)),
+        appBarTheme: getAppBarTheme(Color(0xFF0A1958), Color(0xFFFFC700)),
+        colorScheme: ColorScheme.light(
+          primary: Color(0xFF0A1958),
+          secondary: Color(0xFFFFC700),
+        ),
+      ))
+    };
+    selectedTheme = prefs?.getString('theme') ?? 'light';
+    themeData = appThemeMap[selectedTheme] ?? (ThemeMode.light, ThemeData.light());
+
     appState = this;
   }
 
-  void updateTheme(ThemeMode mode, {ThemeData? custom}) {
+  void updateTheme() {
     setState(() {
-      themeMode = mode;
-      customTheme = custom;
+      themeData = appThemeMap[selectedTheme] ?? (ThemeMode.light, ThemeData.light());
     });
   }
 
-  ElevatedButtonThemeData getElevatedButtonTheme(bgColor) {
+  ElevatedButtonThemeData getElevatedButtonTheme(bgColor, fgColor) {
     return ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: bgColor,
-        foregroundColor: Colors.white,
+        foregroundColor: fgColor,
         padding: EdgeInsets.symmetric(vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
 
-  AppBarTheme getAppBarTheme() {
+  AppBarTheme getAppBarTheme(bgColor, fgColor) {
     return AppBarTheme(
+      backgroundColor: bgColor,
+      foregroundColor: fgColor,
       centerTitle: true,
       elevation: 0
     );
@@ -72,30 +119,22 @@ class MyAppState extends State<MyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       
-      // Define the light theme
-      theme: customTheme ??
-          ThemeData(
-            primarySwatch: Colors.blue,
-            secondaryHeaderColor: Colors.blueAccent,
-            cardTheme: getCardTheme(),
-            inputDecorationTheme: getInputDecorationTheme(100),
-            elevatedButtonTheme: getElevatedButtonTheme(Colors.blue),
-            appBarTheme: getAppBarTheme()
-          ),
-
-      // Define the dark theme
-      darkTheme: ThemeData.dark().copyWith(
-        primaryColor: Colors.blueGrey,
-        cardTheme: getCardTheme(),
-        inputDecorationTheme: getInputDecorationTheme(800),
-        elevatedButtonTheme: getElevatedButtonTheme(Colors.blueGrey),
-        appBarTheme: getAppBarTheme()
-      ),
-
-      // Set the theme mode based on whether a custom theme is provided
-      themeMode: customTheme != null ? ThemeMode.light : themeMode,
-
-      home: HomePage(updateTheme: updateTheme),
+      theme: themeData.$2,
+      darkTheme: appThemeMap["dark"]?.$2 ?? ThemeData.dark(),
+      themeMode: themeData.$1, //custom theme mode
+      home: HomePage(),
     );
   }
+}
+
+void appSaveToPref() async {
+  await prefs?.setString('theme', appState.selectedTheme);
+}
+
+Future<void> changeAppTheme(value, widget, state) async {
+  appState.selectedTheme = value;
+  
+  state.setState(() {
+    appState.updateTheme();
+  });
 }

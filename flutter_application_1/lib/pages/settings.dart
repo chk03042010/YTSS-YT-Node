@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/util.dart';
 import '../main.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -7,7 +8,6 @@ class SettingsPage extends StatefulWidget {
   final List<String> selectedClasses;
   final Function(String, bool?) onClassToggle;
   final Function(List<String>) onMultipleClassSelect;
-  final Function(ThemeMode, {ThemeData? custom}) updateTheme;
 
   const SettingsPage({super.key, 
     required this.onLoginToggle,
@@ -15,7 +15,6 @@ class SettingsPage extends StatefulWidget {
     required this.selectedClasses,
     required this.onClassToggle,
     required this.onMultipleClassSelect,
-    required this.updateTheme,
   });
 
   @override
@@ -23,7 +22,6 @@ class SettingsPage extends StatefulWidget {
 }
 
 class SettingsPageState extends State<SettingsPage> {
-  String? _selectedTheme = 'Light';
   List<String> _selectedClasses = [];
   bool _isDropdownOpen = false;
 
@@ -33,7 +31,7 @@ class SettingsPageState extends State<SettingsPage> {
     _selectedClasses = List.from(widget.selectedClasses);
   }
 
-  void _updateClasses(bool save) {
+  void updateClasses(bool save) {
     if (save) {
       widget.onMultipleClassSelect(_selectedClasses);
     }
@@ -49,8 +47,11 @@ class SettingsPageState extends State<SettingsPage> {
         actions: [
           TextButton(
             onPressed: () {
-              _updateClasses(true);
+              updateClasses(true);
               Navigator.pop(context);
+              appSaveToPref();
+
+              showSnackBar(context, "Settings Saved!");
             },
             child: Text(
               "Save",
@@ -69,15 +70,15 @@ class SettingsPageState extends State<SettingsPage> {
           Padding(
             padding: EdgeInsets.all(16),
             child: Text(
-              "Account Settings", //TODO: lang
+              "Account Settings", 
               style: theme.textTheme.titleLarge,
             ),
           ),
           StatefulBuilder(
             builder: (BuildContext context, StateSetter stateSetter) {
               return SwitchListTile(
-                title: Text("Logged In"), //TODO: lang
-                subtitle: Text("Toggle to enable adding announcements"), //TODO: lang
+                title: Text("Logged In"), 
+                subtitle: Text("Toggle to enable adding announcements"), 
                 value: appState.isLoggedIn,
                 onChanged: (val) {
                   stateSetter(() => appState.isLoggedIn = val);
@@ -94,7 +95,7 @@ class SettingsPageState extends State<SettingsPage> {
           Padding(
             padding: EdgeInsets.all(16),
             child: Text(
-              "Theme", //TODO: lang
+              "Theme", 
               style: theme.textTheme.titleLarge,
             ),
           ),
@@ -103,84 +104,23 @@ class SettingsPageState extends State<SettingsPage> {
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: DropdownButtonFormField<String>(
               decoration: InputDecoration(
-                labelText: "Choose Theme", //TODO: lang
+                labelText: "Choose Theme", 
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
                 prefixIcon: Icon(Icons.color_lens),
               ),
-              value: _selectedTheme,
+              value: appState.selectedTheme,
               items: [
-                DropdownMenuItem(value: 'Light', child: Text('Light')),
-                DropdownMenuItem(value: 'Dark', child: Text('Dark')),
-                DropdownMenuItem(value: 'Pink', child: Text('Pink')),
+                DropdownMenuItem(value: 'light', child: Text('Light')), 
+                DropdownMenuItem(value: 'dark', child: Text('Dark')),
+                DropdownMenuItem(value: 'pink', child: Text('Pink')),
                 DropdownMenuItem(
-                    value: 'YTSS', child: Text('YTSS (Navy & Yellow)')),
+                    value: 'ytss', child: Text('YTSS (Navy & Yellow)')),
               ],
               onChanged: (value) {
-                setState(() {
-                  _selectedTheme = value;
-
-                  // Apply the theme
-                  if (value == 'Light') {
-                    widget.updateTheme(ThemeMode.light);
-                  } else if (value == 'Dark') {
-                    widget.updateTheme(ThemeMode.dark);
-                  } else if (value == 'Pink') {
-                    widget.updateTheme(ThemeMode.light,
-                        custom: ThemeData(
-                          primarySwatch: Colors.pink,
-                          scaffoldBackgroundColor: Color(0xFFFEE5EC),
-                          cardTheme: CardTheme(
-                            elevation: 5,
-                            margin: EdgeInsets.symmetric(
-                                vertical: 10, horizontal: 4),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                          ),
-                          appBarTheme: AppBarTheme(
-                            backgroundColor: Colors.pink,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                          ),
-                          elevatedButtonTheme: ElevatedButtonThemeData(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.pink,
-                              foregroundColor: Colors.white,
-                            ),
-                          ),
-                        ));
-                  } else if (value == 'YTSS') {
-                    widget.updateTheme(ThemeMode.light,
-                        custom: ThemeData(
-                          primaryColor: Color(0xFF0A1958), // Navy blue
-                          scaffoldBackgroundColor: Colors.white,
-                          cardTheme: CardTheme(
-                            elevation: 5,
-                            margin: EdgeInsets.symmetric(
-                                vertical: 10, horizontal: 4),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                          ),
-                          appBarTheme: AppBarTheme(
-                            backgroundColor: Color(0xFF0A1958),
-                            foregroundColor: Color(0xFFFFC700), // Yellow
-                            elevation: 0,
-                          ),
-                          elevatedButtonTheme: ElevatedButtonThemeData(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFF0A1958),
-                              foregroundColor: Color(0xFFFFC700),
-                            ),
-                          ),
-                          colorScheme: ColorScheme.light(
-                            primary: Color(0xFF0A1958),
-                            secondary: Color(0xFFFFC700),
-                          ),
-                        ));
-                  }
-                });
-              },
+                changeAppTheme(value, widget, this);
+              }
             ),
           ),
 
@@ -190,7 +130,7 @@ class SettingsPageState extends State<SettingsPage> {
           Padding(
             padding: EdgeInsets.all(16),
             child: Text(
-              "Class Subscriptions", //TODO: lang
+              "Class Subscriptions", 
               style: theme.textTheme.titleLarge,
             ),
           ),
@@ -198,7 +138,7 @@ class SettingsPageState extends State<SettingsPage> {
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              "Select which classes you want to see announcements for:", //TODO: lang
+              "Select which classes you want to see announcements for:", 
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: Colors.grey[700],
               ),
@@ -228,10 +168,10 @@ class SettingsPageState extends State<SettingsPage> {
                     Expanded(
                       child: Text(
                         _selectedClasses.isEmpty
-                            ? "No classes selected" //TODO: lang
+                            ? "No classes selected" 
                             : _selectedClasses.length == 1
                                 ? _selectedClasses.first
-                                : "${_selectedClasses.length} classes selected", //TODO: lang
+                                : "${_selectedClasses.length} classes selected", 
                       ),
                     ),
                     Icon(_isDropdownOpen
@@ -270,7 +210,7 @@ class SettingsPageState extends State<SettingsPage> {
                       activeColor: theme.primaryColor,
                       dense: true,
                     );
-                  }).toList(),
+                  }),
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Row(
@@ -282,7 +222,7 @@ class SettingsPageState extends State<SettingsPage> {
                               _selectedClasses.clear();
                             });
                           },
-                          child: Text("Clear All"), //TODO: lang
+                          child: Text("Clear All"), 
                         ),
                         TextButton(
                           onPressed: () {
@@ -291,7 +231,7 @@ class SettingsPageState extends State<SettingsPage> {
                                   List.from(widget.availableClasses);
                             });
                           },
-                          child: Text("Select All"), //TODO: lang
+                          child: Text("Select All"), 
                         ),
                       ],
                     ),

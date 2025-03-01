@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/main.dart';
+import 'package:flutter_application_1/pages/homepage.dart';
 import '../util.dart';
 
 class AddAnnouncementPage extends StatefulWidget {
-  final Function(String, String, String, String, String) onAdd;
+  final HomePageState homePageState;
   final List<String> availableClasses;
   final List<String> selectedClasses;
 
-  const AddAnnouncementPage(
-    {super.key, required this.onAdd,
+  const AddAnnouncementPage({super.key,
+      required this.homePageState,
       required this.availableClasses,
       required this.selectedClasses});
 
@@ -19,7 +21,10 @@ class AddAnnouncementPageState extends State<AddAnnouncementPage> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _dateController = TextEditingController();
+  DateTime? _selectedDueDate;
   String? _selectedClass;
+
+  bool isPublic = false;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +34,7 @@ class AddAnnouncementPageState extends State<AddAnnouncementPage> {
         : widget.availableClasses;
 
     return Scaffold(
-      appBar: AppBar(title: Text("Add Announcement")), //TODO: lang
+      appBar: AppBar(title: Text("Add Announcement")), 
       body: SingleChildScrollView(
         child: Padding(
           padding: EdgeInsets.all(16.0),
@@ -39,7 +44,7 @@ class AddAnnouncementPageState extends State<AddAnnouncementPage> {
               TextField(
                   controller: _titleController,
                   decoration: InputDecoration(
-                    labelText: "Title",  //TODO: lang
+                    labelText: "Title",  
                     prefixIcon: Icon(Icons.title),
                   )),
               SizedBox(height: 16),
@@ -47,7 +52,7 @@ class AddAnnouncementPageState extends State<AddAnnouncementPage> {
               //class dropdown selection box
               DropdownButtonFormField(
                 decoration: InputDecoration(
-                  labelText: "Class",  //TODO: lang
+                  labelText: "Class",  
                   prefixIcon: Icon(Icons.class_),
                 ),
 
@@ -70,7 +75,7 @@ class AddAnnouncementPageState extends State<AddAnnouncementPage> {
                   controller: _descriptionController,
                   maxLines: 3,
                   decoration: InputDecoration(
-                    labelText: "Description (Keep it short)",  //TODO: lang
+                    labelText: "Description",  
                     prefixIcon: Padding(
                       padding: const EdgeInsets.only(bottom: 64),
                       child: Icon(Icons.description),
@@ -82,7 +87,7 @@ class AddAnnouncementPageState extends State<AddAnnouncementPage> {
               TextField(
                 controller: _dateController,
                 decoration: InputDecoration(
-                  labelText: "Due Date",  //TODO: lang
+                  labelText: "Due Date",  
                   prefixIcon: Icon(Icons.calendar_today),
                 ),
                 readOnly: true,
@@ -96,40 +101,68 @@ class AddAnnouncementPageState extends State<AddAnnouncementPage> {
                   if (pickedDate != null) {
                     setState(() {
                       _dateController.text = dateFormatDateTime(pickedDate);
+                      _selectedDueDate = pickedDate;
                     });
                   }
                 },
               ),
               SizedBox(height: 24),
 
+              Divider(),
+
+              Row(
+                children: [
+                  Checkbox(
+                    checkColor: Colors.white,
+                    value: isPublic,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        isPublic = value!;
+                      });
+                    },
+                  ),
+                  Text("Public")
+                ]
+              ),
+
+              Divider(),
+
               ElevatedButton(
-                onPressed: () {
-                  if (_titleController.text.isNotEmpty &&
-                      _selectedClass != null &&
-                      _dateController.text.isNotEmpty) {
-                    widget.onAdd(
-                      _titleController.text,
-                      _selectedClass ?? "",
-                      _dateController.text,
-                      "You", //TODO: lang
-                      _descriptionController.text,
-                    );
-                    Navigator.pop(context);
+                onPressed: () async {
+                  var clazz = _selectedClass;
+                  var pickedDate = _selectedDueDate;
+                  if (_titleController.text.isNotEmpty && clazz != null &&
+                      _dateController.text.isNotEmpty && pickedDate != null) {
+                    if (pickedDate.difference(DateTime.now()).inDays < 0) {
+                      showSnackBar(context, "The due date cannot be before today.");
+                    } else {
+                      if (await widget.homePageState.addAnnouncement(
+                        _titleController.text,
+                        clazz,
+                        pickedDate,
+                        account.name, 
+                        _descriptionController.text,
+                        account.uuid,
+                        isPublic
+                      )) {
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          showSnackBar(context, isPublic ? "Announcement published successfully!" : "Personal announcement added.");
+                        }
+                      } else {
+                        if (context.mounted) {
+                          showSnackBar(context, isPublic ? "Failed to send announcement to the server!" : "Failed to sync personal announcement with account.");
+                        }
+                      }
+                    }
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text("Please fill all required fields"),  //TODO: lang
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ));
+                    showSnackBar(context, "Please fill all required fields.");
                   }
                 },
                 child: Container(
                   width: double.infinity,
                   padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Center(
-                      child: Text("Publish", style: TextStyle(fontSize: 16))),
+                  child: Center(child: Text(isPublic ? "Publish" : "Add Privately", style: TextStyle(fontSize: 16))),
                 ),
               ),
             ],

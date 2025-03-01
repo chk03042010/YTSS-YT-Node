@@ -1,74 +1,92 @@
-List<Map<String, String>> getAnnouncementsPlaceholder() {
-  return [{
-      "title": "Math Test",
-      "class": "Class 1",
-      "due": "Feb 28",
-      "postedBy": "Mr. Johnson",
-      "description": "Prepare for calculus test on derivatives and integrals."
-    },
-    {
-      "title": "English Essay",
-      "class": "Class 2",
-      "due": "Mar 3",
-      "postedBy": "Ms. Williams",
-      "description": "Write a 500-word essay on Shakespeare's Hamlet."
-    },
-    {
-      "title": "Physics Lab",
-      "class": "Class 3",
-      "due": "Mar 5",
-      "postedBy": "Dr. Smith",
-      "description": "Prepare for lab on momentum and collisions."
-    },
-    {
-      "title": "History Project",
-      "class": "Class 4",
-      "due": "Mar 10",
-      "postedBy": "Mrs. Davis",
-      "description": "Complete research project on World War II."
-    },
-    {
-      "title": "Chemistry Quiz",
-      "class": "Class 5",
-      "due": "Mar 1",
-      "postedBy": "Dr. Wilson",
-      "description": "Study periodic table and chemical bonding for quiz."
-    },
-    {
-      "title": "Art Exhibition",
-      "class": "Class 6",
-      "due": "Mar 15",
-      "postedBy": "Ms. Thompson",
-      "description": "Prepare your portfolio for the spring exhibition."
-    },
-    {
-      "title": "Computer Science Project",
-      "class": "Class 7",
-      "due": "Mar 7",
-      "postedBy": "Mr. Anderson",
-      "description": "Complete your programming assignment on data structures."
-    },
-    {
-      "title": "Music Recital",
-      "class": "Class 8",
-      "due": "Mar 20",
-      "postedBy": "Mr. Lewis",
-      "description": "Practice your piece for the upcoming recital."
-    },
-    {
-      "title": "Biology Exam",
-      "class": "Class 9",
-      "due": "Mar 12",
-      "postedBy": "Dr. Harris",
-      "description": "Study cell biology and genetics for midterm exam."
-    },
-    {
-      "title": "Physical Education",
-      "class": "Class 10",
-      "due": "Mar 2",
-      "postedBy": "Coach Brown",
-      "description": "Bring appropriate gear for basketball tournament."
-    },
+import 'package:flutter_application_1/main.dart';
+import 'package:flutter_application_1/util.dart';
+
+Account createAccount() {
+  return Account(email: "felix@yay.com", name: "Felix", uuid: 0x123123);
+}
+
+List<AnnouncementData> getAnnouncementsPlaceholder() {
+  return [
+    AnnouncementData(
+      "Math Test",
+      "Class 1",
+      DateTime(2025, 2, 28),
+      "Mr. Johnson",
+      "Prepare for calculus test on derivatives and integrals.",
+      1
+    ),
+    AnnouncementData(
+      "English Essay",
+      "Class 2",
+      DateTime(2025, 3, 3),
+      "Ms. Williams",
+      "Write a 500-word essay on Shakespeare's Hamlet.",
+      2
+    ),
+    AnnouncementData(
+      "Physics Lab",
+      "Class 3",
+      DateTime(2025, 3, 25),
+      "Dr. Smith",
+      "Prepare for lab on momentum and collisions.",
+      3
+    ),
+    AnnouncementData(
+      "History Project",
+      "Class 4",
+      DateTime(2025, 3, 10),
+      "Mrs. Davis",
+      "Complete research project on World War II.",
+      account.uuid
+    ),
+    AnnouncementData(
+      "Chemistry Quiz",
+      "Class 5",
+      DateTime(2025, 3, 1),
+      "Dr. Wilson",
+      "Study periodic table and chemical bonding for quiz.",
+      account.uuid
+    ),
+    AnnouncementData(
+      "Art Exhibition",
+      "Class 6",
+      DateTime(2025, 3, 15),
+      "Ms. Thompson",
+      "Prepare your portfolio for the spring exhibition.",
+      account.uuid
+    ),
+    AnnouncementData(
+      "Computer Science Project",
+      "Class 7",
+      DateTime(2025, 3, 7),
+      "Mr. Anderson",
+      "Complete your programming assignment on data structures.",
+      account.uuid
+    ),
+    AnnouncementData(
+      "Music Recital",
+      "Class 8",
+      DateTime(2025, 3, 20),
+      "Mr. Lewis",
+      "Practice your piece for the upcoming recital.",
+      account.uuid
+    ),
+    AnnouncementData(
+      "Biology Exam",
+      "Class 9",
+      DateTime(2025, 3, 12),
+      "Dr. Harris",
+      "Study cell biology and genetics for midterm exam.",
+      account.uuid
+    ),
+    AnnouncementData(
+      "Physical Education",
+      "Class 10",
+      DateTime(2025, 3, 2),
+      "Coach Brown",
+      "Bring appropriate gear for basketball tournament.",
+      account.uuid
+    ),
   ];
 }
 
