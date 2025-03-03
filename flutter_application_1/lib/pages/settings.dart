@@ -27,7 +27,7 @@ class SettingsPageState extends State<SettingsPage> {
 
   String _newTheme = appState.selectedTheme;
   String _oldTheme = "";
-  bool toSave = false;
+  bool _isChangesMade = false;
 
   @override
   void initState() {
@@ -42,7 +42,7 @@ class SettingsPageState extends State<SettingsPage> {
     }
 
     if (value != _oldTheme) {
-      toSave = true;
+      _isChangesMade = true;
     }
 
     _newTheme = value ?? appState.selectedTheme;
@@ -76,7 +76,7 @@ class SettingsPageState extends State<SettingsPage> {
         ],
         leading: BackButton(
           onPressed: () {
-            if (toSave) {
+            if (_isChangesMade) {
               showDialog(context: context, builder: (BuildContext context) {
                 final theme = Theme.of(context);
                 return AlertDialog(
@@ -246,7 +246,7 @@ class SettingsPageState extends State<SettingsPage> {
                       title: Text(className),
                       value: _selectedClasses.contains(className),
                       onChanged: (bool? value) {
-                        toSave = true;
+                        _isChangesMade = true;
                         setState(() {
                           if (value == true) {
                             _selectedClasses.add(className);

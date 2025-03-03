@@ -62,9 +62,7 @@ Card _createAnnouncementCard(List<AnnouncementData> announcements, int index,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment:
-                  MainAxisAlignment.spaceBetween,
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
                   child: Row(children: [
@@ -79,8 +77,7 @@ Card _createAnnouncementCard(List<AnnouncementData> announcements, int index,
                   ])
                 ),
                 Container(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 6),
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: announcements[index].isCompleted() ? Color.fromRGBO(50, 50, 50, 0.5) : (
                       announcements[index].getDaysToDue() < 0 ? Color.fromRGBO(175, 6, 6, 1) :
@@ -105,14 +102,24 @@ Card _createAnnouncementCard(List<AnnouncementData> announcements, int index,
               ],
             ),
             SizedBox(height: 8),
-            Text(
-              announcements[index].getClass(),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Text(
+                announcements[index].getClass(),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
+                ),
               ),
-            ),
-          ],
-        ),
+              Row(children: [
+                Icon(Icons.flag_rounded, color: Colors.grey),
+                Text(
+                  announcements[index].isPublic() ? "Public" : "Personal",
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
+                  ),
+              ),
+            ])
+          ]),
+        ])
       ),
     ),
   );

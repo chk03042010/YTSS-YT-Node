@@ -143,6 +143,7 @@ void appSaveToPref() async {
 Future<void> changeAppTheme(String value, Widget widget, State state) async {
   appState.selectedTheme = value;
   
+  // ignore: invalid_use_of_protected_member
   state.setState(() {
     appState.updateTheme();
   });
