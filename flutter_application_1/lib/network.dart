@@ -1,13 +1,15 @@
 import 'package:flutter_application_1/pages/placeholder.dart';
+import 'package:flutter_application_1/main.dart';
 import 'package:flutter_application_1/util.dart';
 
 Future<bool> firebaseInit() async {
   //receive announcements and classes here
+  //initialise account, get public and personal announcements, and classes
   return true;
 }
 
 Future<bool> sendAnnouncementToServer(data, isPublic) async {
-  
+  //data.setId(...)
   return true;
 }
 
@@ -21,6 +23,7 @@ Future<bool> deleteAnnouncementFromServer(data) async {
 }
 
 Future<bool> completeAnnouncementInServer(data) async {
+  //completion is personal a.k.a synced to each uuid, NOT public class.
   return true;
 }
 

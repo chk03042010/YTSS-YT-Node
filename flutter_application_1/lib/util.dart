@@ -44,7 +44,7 @@ class DefaultMouseCursor extends WidgetStateMouseCursor {
 Uint8List int32bytes(int value) => Uint8List(4)..buffer.asInt32List()[0] = value;
 
 class AnnouncementData {
-  final int _id;
+  int _id = 0;
 
   final int _authorUUID;
   
@@ -53,7 +53,7 @@ class AnnouncementData {
   bool _isCompleted = false;
   final bool _isPublic;
 
-  late Digest _checksum; //SHA-256
+  late Digest _checksum; //SHA-256 of title, class, due, author, description, and uuid
 
   void _calcChecksum() {
     var b0 = utf8.encode(_title);
@@ -62,6 +62,7 @@ class AnnouncementData {
     var b3 = utf8.encode(_author);
     var b4 = utf8.encode(_desc);
     var b5 = int32bytes(_authorUUID);
+    var b6 = int32bytes(_id);
 
     var output = AccumulatorSink<Digest>();
     var input = sha1.startChunkedConversion(output);
@@ -71,6 +72,7 @@ class AnnouncementData {
     input.add(b3);
     input.add(b4);
     input.add(b5);
+    input.add(b6);
     input.close();
 
     _checksum = output.events.single;
@@ -79,8 +81,7 @@ class AnnouncementData {
   AnnouncementData(String title, String clazz, DateTime due, String author,
                   String description, int authorUUID, bool isPublic) :
       _title = title, _clazz = clazz, _due = due, _author = author,
-      _desc = description, _authorUUID = authorUUID, _isPublic = isPublic,
-      _id = DateTime.now().microsecondsSinceEpoch {
+      _desc = description, _authorUUID = authorUUID, _isPublic = isPublic {
     _calcChecksum();
 
     var completed = prefs?.getBool("announcement_completion_$_checksum");
@@ -96,6 +97,7 @@ class AnnouncementData {
   void setAuthor(String author) { _author = author; _calcChecksum(); }
   void setDue(DateTime due) { _due = due; _calcChecksum(); }
   void setDesc(String desc) { _desc = desc; _calcChecksum(); }
+  void setId(int id) { _id = id; _calcChecksum(); }
   Future<bool> complete() async {
     _isCompleted = true;
     await prefs?.setBool("announcement_completion_$_checksum", true);

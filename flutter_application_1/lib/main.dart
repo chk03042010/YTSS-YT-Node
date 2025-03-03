@@ -13,7 +13,7 @@ void main() async {
   firebaseInit();
 
   prefs = await SharedPreferences.getInstance();
-  account = createAccount();
+  account = createAccount(); //TODO: remove after setting account in firebaseinit
   runApp(MyApp());
 }
 
