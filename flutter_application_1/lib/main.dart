@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/network.dart';
 import 'package:flutter_application_1/pages/placeholder.dart';
 import 'package:flutter_application_1/util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +10,8 @@ SharedPreferences? prefs;
 late final Account account;
 
 void main() async {
+  firebaseInit();
+
   prefs = await SharedPreferences.getInstance();
   account = createAccount();
   runApp(MyApp());
@@ -35,14 +38,14 @@ class MyAppState extends State<MyApp> {
         primarySwatch: Colors.blue,
         secondaryHeaderColor: Colors.blueAccent,
         cardTheme: getCardTheme(),
-        inputDecorationTheme: getInputDecorationTheme(100),
+        inputDecorationTheme: getInputDecorationTheme(Colors.grey[100]),
         elevatedButtonTheme: getElevatedButtonTheme(Colors.blue, Colors.white),
         appBarTheme: getAppBarTheme(Colors.white, Colors.black)
       )),
       "dark": (ThemeMode.dark, ThemeData.dark().copyWith(
         primaryColor: Colors.blueGrey,
         cardTheme: getCardTheme(),
-        inputDecorationTheme: getInputDecorationTheme(800),
+        inputDecorationTheme: getInputDecorationTheme(Colors.grey[800]),
         elevatedButtonTheme: getElevatedButtonTheme(Colors.blueGrey, Colors.white),
         appBarTheme: getAppBarTheme(Colors.black, Colors.white)
       )),
@@ -50,13 +53,19 @@ class MyAppState extends State<MyApp> {
         primarySwatch: Colors.pink,
         scaffoldBackgroundColor: Color(0xFFFEE5EC),
         cardTheme: getCardTheme(),
+        inputDecorationTheme: getInputDecorationTheme(Color.fromARGB(255, 255, 244, 252)),
         elevatedButtonTheme: getElevatedButtonTheme(Colors.pink, Colors.white),
-        appBarTheme: getAppBarTheme(Colors.pink, Colors.white)
+        appBarTheme: getAppBarTheme(Colors.pink, Colors.white),
+        colorScheme: ColorScheme.light(
+          primary: Colors.pink,
+          secondary: Colors.white,
+        ),
       )),
       "ytss": (ThemeMode.light, ThemeData(
         primaryColor: Color(0xFF0A1958), // Navy blue
         scaffoldBackgroundColor: Colors.white,
         cardTheme: getCardTheme(),
+        inputDecorationTheme: getInputDecorationTheme(Colors.grey[100]),
         elevatedButtonTheme: getElevatedButtonTheme(Color(0xFF0A1958), Color(0xFFFFC700)),
         appBarTheme: getAppBarTheme(Color(0xFF0A1958), Color(0xFFFFC700)),
         colorScheme: ColorScheme.light(
@@ -102,7 +111,7 @@ class MyAppState extends State<MyApp> {
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
       contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       filled: true,
-      fillColor: Colors.grey[fillColor],
+      fillColor: fillColor,
     );
   }
 
@@ -131,7 +140,7 @@ void appSaveToPref() async {
   await prefs?.setString('theme', appState.selectedTheme);
 }
 
-Future<void> changeAppTheme(value, widget, state) async {
+Future<void> changeAppTheme(String value, Widget widget, State state) async {
   appState.selectedTheme = value;
   
   state.setState(() {

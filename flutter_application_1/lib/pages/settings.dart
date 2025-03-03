@@ -25,16 +25,37 @@ class SettingsPageState extends State<SettingsPage> {
   List<String> _selectedClasses = [];
   bool _isDropdownOpen = false;
 
+  String _newTheme = appState.selectedTheme;
+  String _oldTheme = "";
+  bool toSave = false;
+
   @override
   void initState() {
     super.initState();
     _selectedClasses = List.from(widget.selectedClasses);
+    _oldTheme = appState.selectedTheme;
   }
 
-  void updateClasses(bool save) {
-    if (save) {
-      widget.onMultipleClassSelect(_selectedClasses);
+  void updateTheme(String? value) {
+    if (value == _newTheme) {
+      return;
     }
+
+    if (value != _oldTheme) {
+      toSave = true;
+    }
+
+    _newTheme = value ?? appState.selectedTheme;
+    changeAppTheme(_newTheme, widget, this);
+  }
+
+  void saveChanges() {
+    widget.onMultipleClassSelect(_selectedClasses);
+    changeAppTheme(_newTheme, widget, this);
+    Navigator.pop(context);
+    appSaveToPref();
+
+    showSnackBar(context, "Settings Saved!");
   }
 
   @override
@@ -46,22 +67,48 @@ class SettingsPageState extends State<SettingsPage> {
         title: Text("Settings"),
         actions: [
           TextButton(
-            onPressed: () {
-              updateClasses(true);
-              Navigator.pop(context);
-              appSaveToPref();
-
-              showSnackBar(context, "Settings Saved!");
-            },
-            child: Text(
-              "Save",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            onPressed: () => saveChanges(),
+            child: Text("Save", style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: appState.themeData.$2.colorScheme.secondary
+            )),
           ),
         ],
+        leading: BackButton(
+          onPressed: () {
+            if (toSave) {
+              showDialog(context: context, builder: (BuildContext context) {
+                final theme = Theme.of(context);
+                return AlertDialog(
+                title: Text("Warning! There are unsaved changes."),
+                titleTextStyle: theme.textTheme.titleSmall,
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      changeAppTheme(_oldTheme, widget, this);
+                      Navigator.pop(context);
+                      Navigator.pop(context);
+                    },
+                    child: Text("Revert changes", style: theme.textTheme.labelMedium?.copyWith(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold
+                    ))
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text("Cancel", style: theme.textTheme.labelMedium?.copyWith(
+                      color: Colors.grey,
+                      fontWeight: FontWeight.bold
+                    ))
+                  ),
+                ]
+              );
+              });
+            } else {
+              Navigator.pop(context);
+            }
+          }
+        ),
       ),
 
       body: ListView(
@@ -119,7 +166,7 @@ class SettingsPageState extends State<SettingsPage> {
                     value: 'ytss', child: Text('YTSS (Navy & Yellow)')),
               ],
               onChanged: (value) {
-                changeAppTheme(value, widget, this);
+                updateTheme(value);
               }
             ),
           ),
@@ -199,6 +246,7 @@ class SettingsPageState extends State<SettingsPage> {
                       title: Text(className),
                       value: _selectedClasses.contains(className),
                       onChanged: (bool? value) {
+                        toSave = true;
                         setState(() {
                           if (value == true) {
                             _selectedClasses.add(className);

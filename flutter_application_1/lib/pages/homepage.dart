@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_application_1/network.dart';
+import 'package:flutter_application_1/pages/homepage_widget.dart';
 import './settings.dart';
 import './placeholder.dart';
 import 'announcement.dart';
@@ -18,7 +18,7 @@ class HomePageState extends State<HomePage> {
   //announcements and classes
   late List<AnnouncementData> announcements;
   List<String> selectedClasses = [];
-  late List<String> availableClasses;
+  List<String> availableClasses = [];
   
   //filter category
   bool showCompleted = true;
@@ -27,9 +27,16 @@ class HomePageState extends State<HomePage> {
   bool showPublic = true;
 
   HomePageState() {
-    announcements = getAnnouncementsPlaceholder();
+    announcements = receiveAnnouncementFromServer() ?? [];
     announcements.sort(AnnouncementData.sortFunction);
-    availableClasses = getClassesPlaceholder();
+    
+    var classes = getClassesPlaceholder();
+    for (var (clazz, selected) in classes) {
+      availableClasses.add(clazz);
+      if (selected) {
+        selectedClasses.add(clazz);
+      }
+    }
   }
 
   void _toggleLogin(bool value) {
@@ -171,200 +178,12 @@ class HomePageState extends State<HomePage> {
                         style: theme.textTheme.titleMedium,
                       ),
                     )
-                  : ListView.builder(
-                      itemCount: announcements.length,
-                      itemBuilder: (context, index) {
-                        if (selectedClasses.isNotEmpty &&
-                            !selectedClasses.contains(announcements[index].getClass())) {
-                          return SizedBox();
-                        }
-
-                        if (!(((showCompleted && announcements[index].isCompleted()) ||
-                            (showUncompleted && !announcements[index].isCompleted())) &&
-                            ((showPersonal && !announcements[index].isPublic()) ||
-                            (showPublic && announcements[index].isPublic())))) {
-                          return SizedBox();
-                        }
-
-                        return Card(
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) {
-                                  return AlertDialog(
-                                    title: Text(announcements[index].getTitle()),
-                                    content: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "Class: ${announcements[index].getClass()}",
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        SizedBox(height: 8),
-                                        Text("Posted by: ${announcements[index].getAuthor()}"),
-                                        Text("Due: ${announcements[index].getDue()}"),
-                                        SizedBox(height: 12),
-                                        Text("Description:"),
-                                        SizedBox(height: 4),
-                                        Text(announcements[index].getDesc()),
-                                      ],
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () async {
-                                          if (!announcements[index].isCompleted()) {
-                                            if (await announcements[index].complete()) {
-                                              if (context.mounted) {
-                                                Navigator.pop(context);
-                                                showSnackBar(context, "Announcement Completed. (\"${announcements[index].getTitle()}\")");
-                                              }
-
-                                              setState(() => announcements.sort(AnnouncementData.sortFunction));
-                                            } else {
-                                              if (context.mounted) {
-                                                showSnackBar(context, "Failed to sync announcement completion with the server. (Try checking your internet connection)");
-                                              }
-                                            }
-                                          }
-                                        },
-                                        style: announcements[index].isCompleted() ?
-                                          ButtonStyle(
-                                            overlayColor: WidgetStateProperty.all(Colors.transparent),
-                                            mouseCursor: DefaultMouseCursor(),
-                                          ) : null,
-                                        child: Text(announcements[index].isCompleted() ? "Completed" : "Complete", style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: announcements[index].isCompleted() ? Colors.grey : Colors.green
-                                        )),
-                                      ),
-                                      TextButton(
-                                        onPressed: () async {
-                                          if (announcements[index].getAuthorUUID() == account.uuid) {
-                                            showDialog(context: context, builder: (BuildContext context) {
-                                              final theme = Theme.of(context);
-                                              return AlertDialog(
-                                                title: Text("Are you sure you want to delete this announcement?"),
-                                                titleTextStyle: theme.textTheme.titleSmall,
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () => Navigator.pop(context),
-                                                    child: Text("Cancel"),
-                                                  ),
-                                                  ElevatedButton(
-                                                    onPressed: () async {
-                                                      if (await deleteAnnouncementFromServer(announcements[index])) {
-                                                        if (context.mounted) {
-                                                          Navigator.pop(context);
-                                                          Navigator.pop(context);
-                                                          showSnackBar(context, "Successfully deleted announcement. (\"${announcements[index].getTitle()}\")");
-                                                        }
-
-                                                        removeAnnouncement(announcements[index]);
-                                                      } else {
-                                                        if (context.mounted) {
-                                                          showSnackBar(context, "Failed to delete announcement. (Try checking your internet connection)");
-                                                        }
-                                                      }
-                                                    }, 
-                                                    style: ButtonStyle(backgroundColor: WidgetStatePropertyAll<Color>(Colors.red)),
-                                                    child: Text("Confirm"),
-                                                  ),
-                                                ],
-                                              );
-                                            });
-                                          }
-                                        },
-                                        style: announcements[index].getAuthorUUID() != account.uuid ?
-                                          ButtonStyle(
-                                            overlayColor: WidgetStateProperty.all(Colors.transparent),
-                                            mouseCursor: DefaultMouseCursor(),
-                                          ) : null,
-                                        child: Text("Delete", style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: announcements[index].getAuthorUUID() == account.uuid ? Colors.red : Colors.grey
-                                        )),
-                                      ),
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: Text("Close"),
-                                      ),
-                                    ],
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-
-                            child: Padding(
-                              padding: EdgeInsets.all(12.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Row(children: [
-                                          announcements[index].isCompleted() ? Icon(Icons.check_box, color: Colors.lightGreen) : SizedBox(),
-                                          Text(
-                                            announcements[index].getTitle(),
-                                            style: theme.textTheme.titleMedium?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              color: announcements[index].isCompleted() ? Colors.grey : null
-                                            ),
-                                          )
-                                        ])
-                                      ),
-                                      Container(
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: announcements[index].isCompleted() ? Color.fromRGBO(50, 50, 50, 0.5) : (
-                                            announcements[index].getDaysToDue() < 0 ? Color.fromRGBO(175, 6, 6, 1) :
-                                                theme.primaryColor.withAlpha((0.2 * 255).toInt())),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          "Due: ${announcements[index].getDue()}", 
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: announcements[index].isCompleted() ? Color.fromRGBO(125, 125, 125, 0.5) :
-                                              switch (announcements[index].getDaysToDue()) {
-                                                0 => Color.fromRGBO(255, 0, 0, 1),
-                                                1 || 2 => Colors.orange,
-                                                3 => Colors.yellow,
-                                                4 => Colors.lime,
-                                                var x => x < 0 ? Color.fromRGBO(255, 120, 120, 1) : Colors.green
-                                              },
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    announcements[index].getClass(),
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: theme.colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
+                  //uncompleted ones at the top
+                  : createAnnouncementList(announcements, selectedClasses,
+                                            showUncompleted, showCompleted, showPersonal, showPublic,
+                                            theme, context, setState, removeAnnouncement)     
+            )
+          ]
         ),
       ),
 

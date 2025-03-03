@@ -100,17 +100,17 @@ List<AnnouncementData> getAnnouncementsPlaceholder() {
   ];
 }
 
-List<String> getClassesPlaceholder() {
+List<(String, bool)> getClassesPlaceholder() {
   return [
-    "Class 1",
-    "Class 2",
-    "Class 3",
-    "Class 4",
-    "Class 5",
-    "Class 6",
-    "Class 7",
-    "Class 8",
-    "Class 9",
-    "Class 10"
+    ("Class 1", true),
+    ("Class 2", true),
+    ("Class 3", true),
+    ("Class 4", true),
+    ("Class 5", true),
+    ("Class 6", true),
+    ("Class 7", true),
+    ("Class 8", true),
+    ("Class 9", true),
+    ("Class 10", true)
   ];
 }
