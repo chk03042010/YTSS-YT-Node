@@ -461,6 +461,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.4"
+  timer_button:
+    dependency: "direct main"
+    description:
+      name: timer_button
+      sha256: e1c3debf93a14412c83ad485f8bdb1cc347871521c544606e72c4148edc18ca3
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.1"
   typed_data:
     dependency: transitive
     description:

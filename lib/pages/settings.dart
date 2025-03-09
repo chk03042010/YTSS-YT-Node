@@ -1,5 +1,8 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/network.dart';
+import 'package:flutter_application_1/pages/homepage.dart';
 import 'package:flutter_application_1/util.dart';
 import '../main.dart';
 
@@ -7,6 +10,7 @@ class SettingsPage extends StatefulWidget {
   final Function(bool) onLoginToggle;
   final List<String> availableClasses;
   final List<String> selectedClasses;
+  final HashMap<String, String> displayClasses;
   final Function(String, bool?) onClassToggle;
   final Function(List<String>) onMultipleClassSelect;
 
@@ -15,6 +19,7 @@ class SettingsPage extends StatefulWidget {
     required this.onLoginToggle,
     required this.availableClasses,
     required this.selectedClasses,
+    required this.displayClasses,
     required this.onClassToggle,
     required this.onMultipleClassSelect,
   });
@@ -25,7 +30,14 @@ class SettingsPage extends StatefulWidget {
 
 class SettingsPageState extends State<SettingsPage> {
   List<String> _selectedClasses = [];
+  final HashSet<String> _classesChanged = HashSet<String>();
   bool _isDropdownOpen = false;
+  final Map<String, bool> _isDropdownOpenLvl = {
+    "Sec4": false,
+    "Sec3": false,
+    "Sec2": false,
+    "Sec1": false
+  };
 
   String _newTheme = appState.selectedTheme;
   String _oldTheme = "";
@@ -51,13 +63,55 @@ class SettingsPageState extends State<SettingsPage> {
     changeAppTheme(_newTheme, widget, this);
   }
 
-  void saveChanges() {
+  void revertChanges() async {
+    _classesChanged.clear();
+  }
+
+  void saveChanges() async {
     widget.onMultipleClassSelect(_selectedClasses);
+
     changeAppTheme(_newTheme, widget, this);
     Navigator.pop(context);
     appSaveToPref();
 
     showSnackBar(context, "Settings Saved!");
+
+    for (String className in _classesChanged) {
+      if (_selectedClasses.contains(className)) {
+        await changeSelectedClassesInServer(className, true);
+        //TODO: add exception handle
+      } else {
+        await changeSelectedClassesInServer(className, false);
+      }
+    }
+    _classesChanged.clear();
+  }
+
+  Iterable<dynamic> getClasses(theme, lvl) {
+    return widget.availableClasses.map((className) {
+      if (className.startsWith(lvl)) {
+        return CheckboxListTile(
+          title: Text(widget.displayClasses[className] ?? ""),
+          value: _selectedClasses.contains(className),
+          onChanged: (bool? value) async {
+            _isChangesMade = true;
+            _classesChanged.add(className);
+
+            setState(() {
+              if (value == true) {
+                _selectedClasses.add(className);
+              } else {
+                _selectedClasses.remove(className);
+              }
+            });
+          },
+          activeColor: theme.primaryColor,
+          dense: true,
+        );
+      } else {
+        return SizedBox();
+      }
+    });
   }
 
   @override
@@ -92,6 +146,7 @@ class SettingsPageState extends State<SettingsPage> {
                     actions: [
                       TextButton(
                         onPressed: () {
+                          revertChanges();
                           changeAppTheme(_oldTheme, widget, this);
                           Navigator.pop(context);
                           Navigator.pop(context);
@@ -196,9 +251,7 @@ class SettingsPageState extends State<SettingsPage> {
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               "Select which classes you want to see announcements for:",
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[700],
-              ),
+              style: theme.textTheme.bodyMedium
             ),
           ),
 
@@ -227,7 +280,7 @@ class SettingsPageState extends State<SettingsPage> {
                         _selectedClasses.isEmpty
                             ? "No classes selected"
                             : _selectedClasses.length == 1
-                            ? _selectedClasses.first
+                            ? (widget.displayClasses[_selectedClasses.first] ?? "")
                             : "${_selectedClasses.length} classes selected",
                       ),
                     ),
@@ -253,32 +306,26 @@ class SettingsPageState extends State<SettingsPage> {
               ),
               child: Column(
                 children: [
-                  ...widget.availableClasses.map((className) {
-                    return CheckboxListTile(
-                      title: Text(className),
-                      value: _selectedClasses.contains(className),
-                      onChanged: (bool? value) async {
-                        _isChangesMade = true;
-
-                        if (value == true) {
-                          await changeSelectedClassesInServer(className, true);
-                          //TODO: add exception handle
-                        } else {
-                          await changeSelectedClassesInServer(className, false);
-                        }
-
+                  ...["Sec 4", "Sec 3", "Sec 2", "Sec 1"].map((lvl) => Column(children: [
+                    InkWell(
+                      onTap: () {
                         setState(() {
-                          if (value == true) {
-                            _selectedClasses.add(className);
-                          } else {
-                            _selectedClasses.remove(className);
-                          }
+                          _isDropdownOpenLvl[lvl] = !(_isDropdownOpenLvl[lvl] ?? false);
                         });
                       },
-                      activeColor: theme.primaryColor,
-                      dense: true,
-                    );
-                  }),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        child: Row(children: [
+                          Icon(Icons.class_sharp),
+                          SizedBox(width: 12),
+                          Expanded(child: Text(lvl)),
+                          Icon(_isDropdownOpenLvl[lvl] == true ? Icons.arrow_drop_up : Icons.arrow_drop_down),
+                      ]))
+                    ),
+
+                    ...(_isDropdownOpenLvl[lvl] == true ? getClasses(theme, lvl) : [SizedBox()])
+                  ])),
+
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Row(

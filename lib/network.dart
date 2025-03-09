@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_application_1/firebase_options.dart';
 import 'package:flutter_application_1/pages/placeholder.dart';
@@ -6,22 +8,36 @@ import 'package:flutter_application_1/util.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
 
-List<AnnouncementData> _announcements = [];
-List<(String, bool)> _classes = [];
-List<String> _classeslookup = [];
-Future<bool> firebaseInit() async {
-  //receive announcements and classes here
-  //initialise account, get public and personal announcements, and classes
-  //TODO: remove classes when not in classes collection
-  account =
-      createAccount(); //TODO: remove after setting account in firebaseinit
+class NetworkClass {
+  String name;
+  bool selected;
 
+  NetworkClass(this.name, this.selected);
+
+  @override
+  bool operator == (Object other) => other is NetworkClass && other.hashCode == hashCode;
+  
+  @override
+  int get hashCode => name.hashCode;
+}
+
+List<AnnouncementData> _announcementServer = [];
+List<NetworkClass> _classUser = [];
+List<String> _classServer = [];
+
+Future<bool> firebaseInit([bool initApp = true]) async {
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    if (initApp) {
+      account = createAccount();
+
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
 
     var database = FirebaseFirestore.instance;
+
+    //get all public announcements
     await database.collection("announcements").get().then((event) {
       for (var doc in event.docs) {
         Map<String, dynamic> content = doc.data();
@@ -36,6 +52,7 @@ Future<bool> firebaseInit() async {
         );
         data.setId(content["id"]);
 
+        //check if user has completed it
         database
             .collection("users")
             .doc(account.uuid)
@@ -50,89 +67,76 @@ Future<bool> firebaseInit() async {
             });
 
         //read if annc is complete, if it is call this function
-        _announcements.add(data);
+        _announcementServer.add(data);
       }
     });
-    await database
-        .collection("users")
-        .doc(account.uuid)
-        .collection("announcements")
-        .get()
-        .then((item) {
-          for (var doc in item.docs) {
-            Map<String, dynamic> content = doc.data();
-            AnnouncementData data = AnnouncementData(
-              content["title"],
-              content["class"],
-              DateTime.parse(content["due"].toDate().toString()),
-              content["author"],
-              content["desc"],
-              content["authorUUID"],
-              false,
-            );
-            data.setId(content["id"]);
 
-            database
-                .collection("users")
-                .doc(account.uuid)
-                .collection("completed")
-                .doc(data.getChecksum())
-                .get()
-                .then((item) {
-                  final content2 = item.data();
-                  if (content2!["isCompleted"]) {
-                    data.complete(true);
-                  }
-                });
+    //get all private announcements
+    await database.collection("users").doc(account.uuid).collection("announcements").get().then((item) {
+      for (var doc in item.docs) {
+        Map<String, dynamic> content = doc.data();
+        AnnouncementData data = AnnouncementData(
+          content["title"],
+          content["class"],
+          DateTime.parse(content["due"].toDate().toString()),
+          content["author"],
+          content["desc"],
+          content["authorUUID"],
+          false,
+        );
+        data.setId(content["id"]);
 
-            //read if annc is complete, if it is call this function
-            _announcements.add(data);
-          }
-        });
-    //${sec4/3/2/1} ${g3/g2/g1} ${class name}
-    await database.collection("classes").doc("sec4").get().then((item) {
-      Map<String, dynamic>? content = item.data();
-      _classeslookup = content!.keys.toList();
-      // for (var minidoc in item) {
-      //   print(minidoc.id);
-      //   database
-      //       .collection("classes")
-      //       .doc("sec4")
-      //       .collection(minidoc.id)
-      //       .get()
-      //       .then((event) {
-      //         for (var content in event.docs) {
-      //           _classeslookup.add(content.id);
-      //           print(content.id);
-      //         }
-      //       });
-      // }
-    });
-    await database
-        .collection("users")
-        .doc(account.uuid)
-        .collection("classes")
-        .get()
-        .then((item) {
-          for (var minidoc in item.docs) {
-            Map<String, dynamic> content = minidoc.data();
-            _classes.add((minidoc.id, content["isselected"]));
-          }
-        });
-    for (var currentclass in _classeslookup) {
-      if (!_classes.contains((currentclass, false)) &&
-          !_classes.contains((currentclass, true))) {
-        _classes.add((currentclass, false));
+        //check if private announcement is completed
+        database
+            .collection("users")
+            .doc(account.uuid)
+            .collection("completed")
+            .doc(data.getChecksum())
+            .get()
+            .then((item) {
+              final content2 = item.data();
+              if (content2!["isCompleted"]) {
+                data.complete(true);
+              }
+            });
+
+        //read if annc is complete, if it is call this function
+        _announcementServer.add(data);
       }
+    });
+
+    //class name format: ${Sec 4/3/2/1} ${class name}
+    for (String level in ["Sec 4", "Sec 3", "Sec 2", "Sec 1"]) {
+      await database.collection("classes").doc(level).get().then((item) {
+        Map<String, dynamic>? content = item.data();
+        for (String name in (content?.keys.toList() ?? [])) {
+          _classServer.add("$level $name");
+          _classUser.add(NetworkClass("$level $name", false));
+        }
+      });
     }
-    for (var currentclass in _classes) {
-      if (!_classeslookup.contains(currentclass.$1)) {
-        _classes.remove(currentclass);
+
+    //get selected classes
+    await database.collection("users").doc(account.uuid).collection("classes").get().then((item) {
+      for (var minidoc in item.docs) {
+        Map<String, dynamic> content = minidoc.data();
+        if (!_classUser.contains(NetworkClass(minidoc.id, false))) {
+          _classUser.add(NetworkClass(minidoc.id, content["isselected"]));
+        } else if (content["isselected"]) {
+          _classUser[_classUser.indexOf(NetworkClass(minidoc.id, false))].selected = content["isselected"];
+        }
+      }
+    });
+
+    //removing classes from the user that no longer exists.
+    for (var currentclass in _classUser) {
+      if (!_classServer.contains(currentclass.name)) {
+        _classUser.remove(currentclass);
         database
             .collection("users")
             .doc(account.uuid)
             .collection("classes")
-            .doc(currentclass.$1)
+            .doc(currentclass.name)
             .delete();
       }
     }
@@ -148,14 +152,8 @@ Future<bool> firebaseInit() async {
   return true;
 }
 
-Future<bool> sendAnnouncementToServer(
-  AnnouncementData data,
-  bool isPublic,
-) async {
+Future<bool> sendAnnouncementToServer(AnnouncementData data, bool isPublic) async {
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
     var database = FirebaseFirestore.instance;
     data.setId(Random().nextInt(1 << 16));
     if (isPublic) {
@@ -168,6 +166,7 @@ Future<bool> sendAnnouncementToServer(
         "id": data.getId(),
         "title": data.getTitle(),
       });
+
       await database
           .collection("users")
           .doc(account.uuid)
@@ -175,12 +174,8 @@ Future<bool> sendAnnouncementToServer(
           .doc(data.getChecksum())
           .set({"isCompleted": false});
     } else {
-      await database
-          .collection("users")
-          .doc(account.uuid)
-          .collection("announcements")
-          .doc(data.getChecksum())
-          .set({
+      await database.collection("users").doc(account.uuid).collection("announcements")
+          .doc(data.getChecksum()).set({
             "author": account.name,
             "authorUUID": data.getAuthorUUID(),
             "class": data.getClass(),
@@ -189,6 +184,7 @@ Future<bool> sendAnnouncementToServer(
             "id": data.getId(),
             "title": data.getTitle(),
           });
+
       await database
           .collection("users")
           .doc(account.uuid)
@@ -208,8 +204,7 @@ Future<bool> sendAnnouncementToServer(
 }
 
 List<AnnouncementData>? receiveAnnouncementFromServer() {
-  //return the announcement received from init here
-  return _announcements; //getAnnouncementsPlaceholder(); //TODO placeholder
+  return _announcementServer;
 }
 
 Future<bool> deleteAnnouncementFromServer(AnnouncementData data) async {
@@ -217,14 +212,16 @@ Future<bool> deleteAnnouncementFromServer(AnnouncementData data) async {
     var database = FirebaseFirestore.instance;
     if (data.isPublic()) {
       database.collection("announcements").doc(data.getChecksum()).delete();
+      //TODO: use Cloud Functions to delete all users' announcements
     } else {
       database
-          .collection("users")
-          .doc(account.uuid)
-          .collection("announcements")
-          .doc(data.getChecksum())
-          .delete();
+        .collection("users")
+        .doc(account.uuid)
+        .collection("announcements")
+        .doc(data.getChecksum())
+        .delete();
     }
+
     database
         .collection("users")
         .doc(account.uuid)
@@ -243,7 +240,6 @@ Future<bool> deleteAnnouncementFromServer(AnnouncementData data) async {
 }
 
 Future<bool> completeAnnouncementInServer(data) async {
-  //completion is personal a.k.a synced to each uuid, NOT public class.
   try {
     var database = FirebaseFirestore.instance;
     final file = database
@@ -264,17 +260,10 @@ Future<bool> completeAnnouncementInServer(data) async {
   return true;
 }
 
-Future<bool> changeSelectedClassesInServer(
-  String classes,
-  bool selected,
-) async {
+Future<bool> changeSelectedClassesInServer(String clazz, bool selected) async {
   try {
     var database = FirebaseFirestore.instance;
-    final file = database
-        .collection("users")
-        .doc(account.uuid)
-        .collection("classes")
-        .doc(classes);
+    final file = database.collection("users").doc(account.uuid).collection("classes").doc(clazz);
     file.set({"isselected": selected});
   } on FirebaseException catch (e) {
     // Caught an exception from Firebase.
@@ -287,8 +276,6 @@ Future<bool> changeSelectedClassesInServer(
   return true;
 }
 
-List<(String, bool)> receiveClassesFromServer() {
-  //return the classes received from init here
-  return _classes;
-  //return getClassesPlaceholder();
+List<NetworkClass> receiveClassesFromServer() {
+  return _classUser;
 }

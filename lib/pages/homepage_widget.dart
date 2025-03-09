@@ -1,11 +1,13 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/main.dart';
 import 'package:flutter_application_1/network.dart';
 import 'package:flutter_application_1/util.dart';
 
-ListView createAnnouncementList(List<AnnouncementData> announcements, List<String> selectedClasses,
+ListView createAnnouncementList(List<AnnouncementData> announcements, List<String> selectedClasses, HashMap<String, String> displayClasses,
                                       bool showUncompleted, bool showCompleted, bool showPersonal, bool showPublic,
-                                      theme, context, setState, removeAnnouncement)=>
+                                      theme, context, setState, removeAnnouncement) =>
   ListView.builder(
     itemCount: announcements.length + 2,
     itemBuilder: (context, index) {
@@ -27,8 +29,7 @@ ListView createAnnouncementList(List<AnnouncementData> announcements, List<Strin
         index--;
       }
 
-      if (selectedClasses.isNotEmpty &&
-          !selectedClasses.contains(announcements[index].getClass())) {
+      if (!selectedClasses.contains(announcements[index].getClass())) {
         return SizedBox();
       }
 
@@ -39,11 +40,11 @@ ListView createAnnouncementList(List<AnnouncementData> announcements, List<Strin
         return SizedBox();
       }
 
-      return _createAnnouncementCard(announcements, index, theme, context, setState, removeAnnouncement);
+      return _createAnnouncementCard(announcements, displayClasses, index, theme, context, setState, removeAnnouncement);
     },
   );
 
-Card _createAnnouncementCard(List<AnnouncementData> announcements, int index,
+Card _createAnnouncementCard(List<AnnouncementData> announcements, HashMap<String, String> displayClasses, int index,
                              theme, context, setState, removeAnnouncement) =>
   Card(
     child: InkWell(
@@ -52,7 +53,7 @@ Card _createAnnouncementCard(List<AnnouncementData> announcements, int index,
         showDialog(
           context: context,
           builder: (context) {
-            return _getAnnouncementAlertDialog(announcements, index, context, setState, removeAnnouncement);
+            return _getAnnouncementAlertDialog(announcements, displayClasses, index, context, setState, removeAnnouncement);
           },
         );
       },
@@ -104,7 +105,7 @@ Card _createAnnouncementCard(List<AnnouncementData> announcements, int index,
             SizedBox(height: 8),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Text(
-                announcements[index].getClass(),
+                displayClasses[announcements[index].getClass()] ?? "",
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
                 ),
@@ -124,8 +125,8 @@ Card _createAnnouncementCard(List<AnnouncementData> announcements, int index,
     ),
   );
 
-dynamic _getAnnouncementAlertDialog(List<AnnouncementData> announcements, int index,
-                                        context, setState, removeAnnouncement) {
+dynamic _getAnnouncementAlertDialog(List<AnnouncementData> announcements, HashMap<String, String> displayClasses,
+                                      int index, context, setState, removeAnnouncement) {
   var data = announcements[index];
   return AlertDialog(
     title: Text(data.getTitle()),
@@ -135,9 +136,8 @@ dynamic _getAnnouncementAlertDialog(List<AnnouncementData> announcements, int in
           CrossAxisAlignment.start,
       children: [
         Text(
-          "Class: ${data.getClass()}",
-          style: TextStyle(
-              fontWeight: FontWeight.bold),
+          "Class: ${displayClasses[data.getClass()] ?? ""}",
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         SizedBox(height: 8),
         Row(children: [Text("Posted by: ",  style: TextStyle(fontWeight: FontWeight.bold)),
