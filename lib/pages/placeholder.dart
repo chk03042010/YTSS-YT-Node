@@ -6,7 +6,6 @@ Account createAccount() {
     email: "felix@yay.com",
     name: "Felix",
     uuid: "cbJ31YQ4RtNjgBDFdcEBsU30AhX2",
-    level: 4,
   );
 }
 

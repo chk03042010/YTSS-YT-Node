@@ -11,14 +11,8 @@ import 'package:flutter_application_1/network.dart';
 
 class Account {
   String name, email, uuid;
-  int level;
 
-  Account({
-    required this.name,
-    required this.email,
-    required this.uuid,
-    required this.level,
-  });
+  Account({required this.name, required this.email, required this.uuid});
 }
 
 void showSnackBar(context, msg) {
