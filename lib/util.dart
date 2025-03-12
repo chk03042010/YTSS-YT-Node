@@ -6,8 +6,8 @@ import 'dart:typed_data';
 import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/main.dart';
-import 'package:flutter_application_1/network.dart';
+import 'package:ytsync/main.dart';
+import 'package:ytsync/network.dart';
 
 class Account {
   String name, email, uuid;
@@ -15,7 +15,11 @@ class Account {
   Account({required this.name, required this.email, required this.uuid});
 }
 
-void showSnackBar(context, msg) {
+void showSnackBar(BuildContext context, msg) {
+  if (!context.mounted) {
+    return;
+  }
+
   ScaffoldMessenger.of(context).removeCurrentSnackBar();
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(

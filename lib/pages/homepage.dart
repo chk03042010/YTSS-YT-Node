@@ -1,9 +1,7 @@
 import 'dart:collection';
-import 'dart:math';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/network.dart';
-import 'package:flutter_application_1/pages/homepage_widget.dart';
+import 'package:ytsync/network.dart';
+import 'package:ytsync/pages/homepage_widget.dart';
 import 'package:timer_button/timer_button.dart';
 import './settings.dart';
 import 'announcement.dart';
@@ -52,12 +50,6 @@ class HomePageState extends State<HomePage> {
     }
     availableClasses.sort();
     selectedClasses.sort();
-  }
-
-  void _toggleLogin(bool value) {
-    setState(() {
-      appState.isLoggedIn = value;
-    });
   }
 
   void _toggleClassSelection(String className, bool? value) {
@@ -117,7 +109,6 @@ class HomePageState extends State<HomePage> {
     return MaterialPageRoute(
       builder:
           (context) => SettingsPage(
-            onLoginToggle: _toggleLogin,
             availableClasses: availableClasses,
             selectedClasses: selectedClasses,
             displayClasses: displayClasses,
@@ -271,6 +262,7 @@ class HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Text(
           "Announcements",
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -338,70 +330,43 @@ class HomePageState extends State<HomePage> {
         onTap: (index) {
           if (index == 0) {
             // Add
-            if (appState.isLoggedIn) {
-              if (selectedClasses.isNotEmpty) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (context) => AddAnnouncementPage(
-                          homePageState: this,
-                          availableClasses: availableClasses,
-                          selectedClasses: selectedClasses,
-                          displayClasses: displayClasses
-                        ),
-                  ),
-                );
-              } else {
-                showDialog(
-                  context: context,
+            if (selectedClasses.isNotEmpty) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
                   builder:
-                    (context) => AlertDialog(
-                      title: Text("No classes selected."),
-                      content: Text("Please select at least one class to continue."),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: Text("Cancel"),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            Navigator.push(context, getSettingsPageMaterial());
-                          },
-                          child: Text("Go to Settings"),
-                        ),
-                      ],
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                      (context) => AddAnnouncementPage(
+                        homePageState: this,
+                        availableClasses: availableClasses,
+                        selectedClasses: selectedClasses,
+                        displayClasses: displayClasses
                       ),
-                    ),
-                );
-              }
+                ),
+              );
             } else {
               showDialog(
                 context: context,
                 builder:
-                    (context) => AlertDialog(
-                      title: Text("Sign in Required"),
-                      content: Text("You need to be signed in to add announcements."),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: Text("Cancel"),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            Navigator.push(context, getSettingsPageMaterial());
-                          },
-                          child: Text("Go to Settings"),
-                        ),
-                      ],
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                  (context) => AlertDialog(
+                    title: Text("No classes selected."),
+                    content: Text("Please select at least one class to continue."),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text("Cancel"),
                       ),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          Navigator.push(context, getSettingsPageMaterial());
+                        },
+                        child: Text("Go to Settings"),
+                      ),
+                    ],
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
+                  ),
               );
             }
           } else if (index == 1) {

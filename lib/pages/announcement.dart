@@ -1,8 +1,8 @@
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/main.dart';
-import 'package:flutter_application_1/pages/homepage.dart';
+import 'package:ytsync/main.dart';
+import 'package:ytsync/pages/homepage.dart';
 import '../util.dart';
 
 class AddAnnouncementPage extends StatefulWidget {

@@ -1,13 +1,12 @@
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/network.dart';
-import 'package:flutter_application_1/pages/homepage.dart';
-import 'package:flutter_application_1/util.dart';
-import '../main.dart';
+import 'package:ytsync/network.dart';
+import 'package:ytsync/pages/login.dart';
+import 'package:ytsync/util.dart';
+import 'package:ytsync/main.dart';
 
 class SettingsPage extends StatefulWidget {
-  final Function(bool) onLoginToggle;
   final List<String> availableClasses;
   final List<String> selectedClasses;
   final HashMap<String, String> displayClasses;
@@ -16,7 +15,6 @@ class SettingsPage extends StatefulWidget {
 
   const SettingsPage({
     super.key,
-    required this.onLoginToggle,
     required this.availableClasses,
     required this.selectedClasses,
     required this.displayClasses,
@@ -118,6 +116,8 @@ class SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    print(widget.availableClasses);
+
     return Scaffold(
       appBar: AppBar(
         title: Text("Settings"),
@@ -183,24 +183,43 @@ class SettingsPageState extends State<SettingsPage> {
       body: ListView(
         children: [
           // Top bar section
-          Padding(
-            padding: EdgeInsets.all(16),
-            child: Text("Account Settings", style: theme.textTheme.titleLarge),
-          ),
-          StatefulBuilder(
-            builder: (BuildContext context, StateSetter stateSetter) {
-              return SwitchListTile(
-                title: Text("Logged In"),
-                subtitle: Text("Toggle to enable adding announcements"),
-                value: appState.isLoggedIn,
-                onChanged: (val) {
-                  stateSetter(() => appState.isLoggedIn = val);
-                  widget.onLoginToggle(val);
-                },
-                activeColor: theme.primaryColor,
-              );
-            },
-          ),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: Text("Account Settings", style: theme.textTheme.titleLarge),
+              ),
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: TextButton(
+                  onPressed: () async {
+                    String? msg = await signOut();
+                    if (msg == null && context.mounted) {
+                      while (Navigator.canPop(context)) {
+                        Navigator.pop(context);
+                      }
+                      Navigator.push(context, MaterialPageRoute(
+                        builder: (context) => LogInPage(),
+                      ));
+
+                      widget.availableClasses.clear();
+                      widget.selectedClasses.clear();
+                      
+
+                      showSnackBar(context, "Signed out from current account!");
+                    } else {
+                      showSnackBar(context, msg);
+                    }
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.all(Colors.red)
+                  ),
+                  child: Text("Sign Out", style: TextStyle(
+                    color: Colors.white
+                  ))
+                )
+              )
+          ]),
 
           // Theme section
           Divider(),

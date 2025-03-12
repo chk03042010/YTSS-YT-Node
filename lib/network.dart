@@ -1,10 +1,9 @@
-import 'dart:collection';
 
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter_application_1/firebase_options.dart';
-import 'package:flutter_application_1/pages/placeholder.dart';
-import 'package:flutter_application_1/main.dart';
-import 'package:flutter_application_1/util.dart';
+import 'package:ytsync/firebase_options.dart';
+import 'package:ytsync/pages/placeholder.dart';
+import 'package:ytsync/main.dart';
+import 'package:ytsync/util.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -30,7 +29,7 @@ String getMessageFromErrorCodeAuth(e) {
   switch (e.code) {
     case "account-exists-with-different-credential":
     case "email-already-in-use":
-      return "Email already used. Go to login page.";
+      return "Email already used. Please go to the login page.";
     case "wrong-password":
       return "Wrong email/password combination.";
     case "user-not-found":
@@ -44,14 +43,14 @@ String getMessageFromErrorCodeAuth(e) {
     case "invalid-email":
       return "Email address is invalid.";
     default:
-      return "Login failed. Please try again.";
+      return "Something went wrong. Please try again.";
   }
 }
 
-String getMessageFromErrorCodeDB(e) {
+String getMessageFromErrorCode(e) {
   switch (e.code) {
     case "aborted":
-      return "";
+      return "Error: Connection Aborted.";
     case "already-exists":
       return "";
     case "cancelled":
@@ -85,19 +84,22 @@ String getMessageFromErrorCodeDB(e) {
   }
 }
 
-Future<bool> firebaseInit([bool initApp = true]) async {
+Future<(bool, String)> firebaseInit([bool initApp = true, String email = "", String password = "",
+                                    String? name]) async {
   try {
+    _announcementServer.clear();
+    _classServer.clear();
+    _classUser.clear();
     if (initApp) {
-      // account = createAccount();
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-      // account = await registerAccount(
-      //   "aleph@ytss.edu.sg",
-      //   "password1",
-      //   "alpha",
-      // );
-      account = await signIn("aleph@ytss.edu.sg", "password1");
+      var accountUnsafe = name != null ? await registerAccount(email, password, name) :
+                                          await signIn(email, password);
+      if (accountUnsafe is String) {
+        return (false, accountUnsafe);
+      } else if (accountUnsafe is Account) {
+        account = accountUnsafe;
+      } else {
+        return (false, "Unknown error occurred.");
+      }
     }
 
     var database = FirebaseFirestore.instance;
@@ -126,7 +128,7 @@ Future<bool> firebaseInit([bool initApp = true]) async {
             .get()
             .then((item) {
               final content2 = item.data();
-              if (content2!["isCompleted"]) {
+              if (content2 != null && content2["isCompleted"]) {
                 data.complete(true);
               }
             });
@@ -165,7 +167,7 @@ Future<bool> firebaseInit([bool initApp = true]) async {
                 .get()
                 .then((item) {
                   final content2 = item.data();
-                  if (content2!["isCompleted"]) {
+                  if (content2 != null && content2["isCompleted"]) {
                     data.complete(true);
                   }
                 });
@@ -218,11 +220,10 @@ Future<bool> firebaseInit([bool initApp = true]) async {
     }
   } on FirebaseException catch (e) {
     // Caught an exception from Firebase.
-    getMessageFromErrorCodeDB(e);
-    return false;
+    return (false, getMessageFromErrorCode(e));
   }
 
-  return true;
+  return (true, "");
 }
 
 Future<bool> sendAnnouncementToServer(
@@ -274,7 +275,7 @@ Future<bool> sendAnnouncementToServer(
     }
   } on FirebaseException catch (e) {
     // Caught an exception from Firebase.
-    getMessageFromErrorCodeDB(e);
+    getMessageFromErrorCode(e);
     return false;
   }
   return true;
@@ -306,7 +307,7 @@ Future<bool> deleteAnnouncementFromServer(AnnouncementData data) async {
         .doc(data.getChecksum())
         .delete();
   } on FirebaseException catch (e) {
-    getMessageFromErrorCodeDB(e);
+    getMessageFromErrorCode(e);
     return false;
   }
   return true;
@@ -319,11 +320,9 @@ Future<bool> completeAnnouncementInServer(data) async {
         .collection("users")
         .doc(account.uuid)
         .collection("completed")
-        .doc(data.getChecksum());
-
-    file.update({"isCompleted": true});
+        .doc(data.getChecksum()).set({"isCompleted": true});
   } on FirebaseException catch (e) {
-    getMessageFromErrorCodeDB(e);
+    getMessageFromErrorCode(e);
     return false;
   }
   return true;
@@ -339,7 +338,7 @@ Future<bool> changeSelectedClassesInServer(String clazz, bool selected) async {
         .doc(clazz);
     file.set({"isselected": selected});
   } on FirebaseException catch (e) {
-    getMessageFromErrorCodeDB(e);
+    getMessageFromErrorCode(e);
     return false;
   }
   return true;
@@ -349,13 +348,13 @@ List<NetworkClass> receiveClassesFromServer() {
   return _classUser;
 }
 
-Future<Account> registerAccount(
+Future<dynamic> registerAccount(
   String emailAddress,
   String password,
   String name,
 ) async {
   // Initial default session
-  var currentSession = Account(name: "guest", email: "guest", uuid: "0");
+  Account? currentSession;
 
   try {
     // Create user in FirebaseAuth
@@ -375,15 +374,14 @@ Future<Account> registerAccount(
     // Update current session with the new user details
     currentSession = Account(name: name, email: emailAddress, uuid: uuid);
   } on FirebaseAuthException catch (e) {
-    getMessageFromErrorCodeAuth(e);
-    return currentSession;
+    return getMessageFromErrorCodeAuth(e);
   }
 
   // Return the updated current session
   return currentSession;
 }
 
-Future<Account> signIn(String emailAddress, String password) async {
+Future<dynamic> signIn(String emailAddress, String password) async {
   var currentSession = Account(name: "guest", email: "guest", uuid: "0");
 
   try {
@@ -403,38 +401,35 @@ Future<Account> signIn(String emailAddress, String password) async {
       var docSnapshot = await database.collection("users").doc(uuid).get();
       if (docSnapshot.exists) {
         Map<String, dynamic>? content = docSnapshot.data();
-        name =
-            content?["name"] ??
-            "guest"; // Ensure name is safely fetched, default to "guest"
+        name = content?["name"] ?? "guest"; // Ensure name is safely fetched, default to "guest"
       }
     }
 
     // Update currentSession with fetched data
     currentSession = Account(name: name, email: emailAddress, uuid: uuid);
   } on FirebaseAuthException catch (e) {
-    getMessageFromErrorCodeAuth(e);
-    return currentSession;
+    return getMessageFromErrorCodeAuth(e);
   }
 
   return currentSession;
 }
 
-Future<bool> signOut() async {
+Future<String?> signOut() async {
   try {
     await FirebaseAuth.instance.signOut();
   } on FirebaseAuthException catch (e) {
-    getMessageFromErrorCodeAuth(e);
-    return false;
+    return getMessageFromErrorCodeAuth(e);
   }
-  return true;
+  return null;
 }
 
-Future<bool> resetPassword(String email) async {
+Future<String?> resetPassword(String email) async {
   try {
     await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
   } on FirebaseAuthException catch (e) {
-    getMessageFromErrorCodeAuth(e);
-    return false;
+    return getMessageFromErrorCodeAuth(e);
+  } on FirebaseException catch (e) {
+    return getMessageFromErrorCode(e);
   }
-  return true;
+  return null;
 }

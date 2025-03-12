@@ -1,9 +1,9 @@
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/main.dart';
-import 'package:flutter_application_1/network.dart';
-import 'package:flutter_application_1/util.dart';
+import 'package:ytsync/main.dart';
+import 'package:ytsync/network.dart';
+import 'package:ytsync/util.dart';
 
 ListView createAnnouncementList(List<AnnouncementData> announcements, List<String> selectedClasses, HashMap<String, String> displayClasses,
                                       bool showUncompleted, bool showCompleted, bool showPersonal, bool showPublic,
