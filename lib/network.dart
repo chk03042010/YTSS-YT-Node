@@ -1,4 +1,3 @@
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:ytsync/firebase_options.dart';
 import 'package:ytsync/pages/placeholder.dart';
@@ -42,6 +41,12 @@ String getMessageFromErrorCodeAuth(e) {
       return "Server error, please try again later.";
     case "invalid-email":
       return "Email address is invalid.";
+    case "weak-password":
+      return "";
+    case "expired-action-code":
+      return "";
+    case "invalid-action-code":
+      return "";
     default:
       return "Something went wrong. Please try again.";
   }
@@ -84,15 +89,21 @@ String getMessageFromErrorCode(e) {
   }
 }
 
-Future<(bool, String)> firebaseInit([bool initApp = true, String email = "", String password = "",
-                                    String? name]) async {
+Future<(bool, String)> firebaseInit([
+  bool initApp = true,
+  String email = "",
+  String password = "",
+  String? name,
+]) async {
   try {
     _announcementServer.clear();
     _classServer.clear();
     _classUser.clear();
     if (initApp) {
-      var accountUnsafe = name != null ? await registerAccount(email, password, name) :
-                                          await signIn(email, password);
+      var accountUnsafe =
+          name != null
+              ? await registerAccount(email, password, name)
+              : await signIn(email, password);
       if (accountUnsafe is String) {
         return (false, accountUnsafe);
       } else if (accountUnsafe is Account) {
@@ -320,7 +331,8 @@ Future<bool> completeAnnouncementInServer(data) async {
         .collection("users")
         .doc(account.uuid)
         .collection("completed")
-        .doc(data.getChecksum()).set({"isCompleted": true});
+        .doc(data.getChecksum())
+        .set({"isCompleted": true});
   } on FirebaseException catch (e) {
     getMessageFromErrorCode(e);
     return false;
@@ -401,7 +413,9 @@ Future<dynamic> signIn(String emailAddress, String password) async {
       var docSnapshot = await database.collection("users").doc(uuid).get();
       if (docSnapshot.exists) {
         Map<String, dynamic>? content = docSnapshot.data();
-        name = content?["name"] ?? "guest"; // Ensure name is safely fetched, default to "guest"
+        name =
+            content?["name"] ??
+            "guest"; // Ensure name is safely fetched, default to "guest"
       }
     }
 
