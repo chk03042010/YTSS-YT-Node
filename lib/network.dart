@@ -94,6 +94,8 @@ Future<(bool, String)> firebaseInit([
   String email = "",
   String password = "",
   String? name,
+  String clazz = "",
+  String registerNumber = "",
 ]) async {
   try {
     _announcementServer.clear();
@@ -102,7 +104,13 @@ Future<(bool, String)> firebaseInit([
     if (initApp) {
       var accountUnsafe =
           name != null
-              ? await registerAccount(email, password, name)
+              ? await registerAccount(
+                email,
+                password,
+                name,
+                clazz,
+                registerNumber,
+              )
               : await signIn(email, password);
       if (accountUnsafe is String) {
         return (false, accountUnsafe);
@@ -364,6 +372,8 @@ Future<dynamic> registerAccount(
   String emailAddress,
   String password,
   String name,
+  String clazz,
+  String registerNumber,
 ) async {
   // Initial default session
   Account? currentSession;
@@ -381,7 +391,11 @@ Future<dynamic> registerAccount(
 
     // Store user information in Firestore
     var database = FirebaseFirestore.instance;
-    await database.collection("users").doc(uuid).set({"name": name});
+    await database.collection("users").doc(uuid).set({
+      "name": name,
+      "class": clazz,
+      "registernum": registerNumber,
+    });
 
     // Update current session with the new user details
     currentSession = Account(name: name, email: emailAddress, uuid: uuid);

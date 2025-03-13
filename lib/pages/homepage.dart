@@ -20,7 +20,8 @@ class HomePageState extends State<HomePage> {
   late List<AnnouncementData> announcements;
   List<String> selectedClasses = [];
   List<String> availableClasses = [];
-  HashMap<String, String> displayClasses = HashMap<String, String>(); //actual name, display name
+  HashMap<String, String> displayClasses =
+      HashMap<String, String>(); //actual name, display name
 
   //filter category
   bool showCompleted = true;
@@ -42,8 +43,13 @@ class HomePageState extends State<HomePage> {
       var selected = entry.selected;
 
       availableClasses.add(clazz);
-      displayClasses[clazz] = clazz.replaceAll("Sec 4", "").replaceAll("Sec 3", "")
-                                  .replaceAll("Sec 2", "").replaceAll("Sec 1", "").trimLeft();
+      displayClasses[clazz] =
+          clazz
+              .replaceAll("Sec 4", "")
+              .replaceAll("Sec 3", "")
+              .replaceAll("Sec 2", "")
+              .replaceAll("Sec 1", "")
+              .trimLeft();
       if (selected) {
         selectedClasses.add(clazz);
       }
@@ -165,7 +171,7 @@ class HomePageState extends State<HomePage> {
                         TableRow(
                           children: [
                             Text(
-                              "Show Uncompleted",
+                              "Show Incomplete",
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 20.0,
@@ -250,12 +256,12 @@ class HomePageState extends State<HomePage> {
       availableClasses.clear();
       displayClasses.clear();
       announcements.clear();
-  
+
       await firebaseInit(false);
-  
+
       setState(() {
         homepageInit();
-  
+
         showSnackBar(context, "Refreshed Page.");
       });
     }
@@ -273,34 +279,62 @@ class HomePageState extends State<HomePage> {
         padding: EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              IconButton(
-                icon: Icon(Icons.filter_alt_outlined),
-                tooltip: "Pick a filter to categorise the announcements.",
-                onPressed: () => showFilterPopup(context),
-              ),
-              TimerButton.builder(
-                onPressed: refreshFunc,
-                builder: (context, timeLeft) {
-                  return MouseRegion(
-                      cursor: timeLeft >= 0 ? DefaultMouseCursor() : SystemMouseCursors.click,
-                      child: timeLeft >= 0 ?
-                      Text("Refresh (${timeLeft}s)", style: theme.textTheme.labelLarge) :
-                      Text("Refresh", style: theme.textTheme.labelLarge?.copyWith(
-                        color: appState.themeData.$2.colorScheme.secondary
-                      ))
-                  );
-                },
-                timeOutInSeconds: 60
-              )
-            ]),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.filter_alt_outlined),
+                  tooltip: "Pick a filter to categorise the announcements.",
+                  onPressed: () => showFilterPopup(context),
+                ),
+                Row(
+                  children: [
+                    Icon(Icons.refresh_outlined),
+                    TimerButton.builder(
+                      onPressed: refreshFunc,
+                      builder: (context, timeLeft) {
+                        return MouseRegion(
+                          cursor:
+                              timeLeft >= 0
+                                  ? DefaultMouseCursor()
+                                  : SystemMouseCursors.click,
+                          child:
+                              timeLeft >= 0
+                                  ? Text(
+                                    "Refresh (${timeLeft}s)",
+                                    style: theme.textTheme.labelLarge,
+                                  )
+                                  : Text(
+                                    "Refresh",
+                                    style: theme.textTheme.labelLarge?.copyWith(
+                                      color:
+                                          appState
+                                              .themeData
+                                              .$2
+                                              .colorScheme
+                                              .secondary,
+                                    ),
+                                  ),
+                        );
+                      },
+                      timeOutInSeconds: 60,
+                    ),
+                  ],
+                ),
+              ],
+            ),
 
             Divider(),
 
             Expanded(
               child:
                   announcements.isEmpty
-                      ? Center(child: Text("No announcements to display", style: theme.textTheme.titleMedium))
+                      ? Center(
+                        child: Text(
+                          "No announcements to display",
+                          style: theme.textTheme.titleMedium,
+                        ),
+                      )
                       : (createAnnouncementList(
                         announcements,
                         selectedClasses,
@@ -339,7 +373,7 @@ class HomePageState extends State<HomePage> {
                         homePageState: this,
                         availableClasses: availableClasses,
                         selectedClasses: selectedClasses,
-                        displayClasses: displayClasses
+                        displayClasses: displayClasses,
                       ),
                 ),
               );
@@ -347,26 +381,28 @@ class HomePageState extends State<HomePage> {
               showDialog(
                 context: context,
                 builder:
-                  (context) => AlertDialog(
-                    title: Text("No classes selected."),
-                    content: Text("Please select at least one class to continue."),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text("Cancel"),
+                    (context) => AlertDialog(
+                      title: Text("No classes selected."),
+                      content: Text(
+                        "Please select at least one class to continue.",
                       ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          Navigator.push(context, getSettingsPageMaterial());
-                        },
-                        child: Text("Go to Settings"),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text("Cancel"),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.push(context, getSettingsPageMaterial());
+                          },
+                          child: Text("Go to Settings"),
+                        ),
+                      ],
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                    ],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
                     ),
-                  ),
               );
             }
           } else if (index == 1) {
