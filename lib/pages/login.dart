@@ -63,9 +63,10 @@ class LogInPageState extends State<LogInPage> {
         ],
         duration: Duration(seconds: 15),
         child: SizedBox(
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.height,
-            child: SingleChildScrollView(child: Center(
+          width: MediaQuery.of(context).size.width,
+          height: MediaQuery.of(context).size.height,
+          child: SingleChildScrollView(
+            child: Center(
               child: Padding(
                 padding: EdgeInsets.all(16.0),
                 child: Column(
@@ -104,7 +105,7 @@ class LogInPageState extends State<LogInPage> {
                                 hintText: 'Username',
                               ),
                             ),
-                            
+
                           SizedBox(height: 15),
                           TextField(
                             controller: _emailText,
@@ -124,7 +125,7 @@ class LogInPageState extends State<LogInPage> {
                               hintText: 'Password',
                             ),
                           ),
-                          
+
                           SizedBox(height: 10),
 
                           if (!loginPage)
@@ -139,14 +140,13 @@ class LogInPageState extends State<LogInPage> {
                               ),
                             ),
 
-                          if (!loginPage)
-                            SizedBox(height: 10),
-                            
+                          if (!loginPage) SizedBox(height: 10),
+
                           if (!loginPage)
                             Row(
                               children: [
-                                Expanded(child:
-                                  TextField(
+                                Expanded(
+                                  child: TextField(
                                     maxLength: 2,
                                     controller: _classText,
                                     decoration: InputDecoration(
@@ -156,11 +156,11 @@ class LogInPageState extends State<LogInPage> {
                                     ),
                                   ),
                                 ),
-                                
-                                Expanded(child:
-                                  TextField(
+
+                                Expanded(
+                                  child: TextField(
                                     inputFormatters: <TextInputFormatter>[
-                                      FilteringTextInputFormatter.digitsOnly
+                                      FilteringTextInputFormatter.digitsOnly,
                                     ],
                                     controller: _registerNumText,
                                     keyboardType: TextInputType.number,
@@ -170,7 +170,7 @@ class LogInPageState extends State<LogInPage> {
                                     ),
                                   ),
                                 ),
-                              ]
+                              ],
                             ),
 
                           SizedBox(height: 5),
@@ -262,14 +262,19 @@ class LogInPageState extends State<LogInPage> {
 
                               if (!loginPage) {
                                 if (int.tryParse(_classText.text[0]) == null ||
-                                    !RegExp(r'[a-zA-Z]').hasMatch(_classText.text[1])) {
+                                    !RegExp(
+                                      r'[a-zA-Z]',
+                                    ).hasMatch(_classText.text[1])) {
                                   showSnackBar(
                                     context,
                                     "Class format is invalid. (eg: 4F)",
                                   );
                                   return;
-                                } else if ((int.tryParse(_classText.text[0]) ?? 5) >= 5 ||
-                                          (int.tryParse(_classText.text[0]) ?? 0) <= 0) {
+                                } else if ((int.tryParse(_classText.text[0]) ??
+                                            5) >=
+                                        5 ||
+                                    (int.tryParse(_classText.text[0]) ?? 0) <=
+                                        0) {
                                   showSnackBar(
                                     context,
                                     "Classes can only be 1 to 4. (eg: 1A, 2A, 3A, 4A)",
@@ -277,7 +282,6 @@ class LogInPageState extends State<LogInPage> {
                                   return;
                                 }
                               }
-                              
 
                               if (!loginPage) {
                                 if (_registerNumText.text.isEmpty) {
@@ -302,6 +306,8 @@ class LogInPageState extends State<LogInPage> {
                                 _emailText.text,
                                 _passText.text,
                                 loginPage ? null : _nameText.text,
+                                _classText.text,
+                                _registerNumText.text,
                               );
 
                               if (result.$1) {
@@ -313,8 +319,14 @@ class LogInPageState extends State<LogInPage> {
                                         : "Sign up success. Welcome to YTSync!",
                                   );
 
-                                  prefs?.setString("credential-email", _emailText.text);
-                                  prefs?.setString("credential-pass", _passText.text);
+                                  prefs?.setString(
+                                    "credential-email",
+                                    _emailText.text,
+                                  );
+                                  prefs?.setString(
+                                    "credential-pass",
+                                    _passText.text,
+                                  );
 
                                   Navigator.push(
                                     context,

@@ -34,7 +34,7 @@ class SettingsPageState extends State<SettingsPage> {
     "Sec4": false,
     "Sec3": false,
     "Sec2": false,
-    "Sec1": false
+    "Sec1": false,
   };
 
   String _newTheme = appState.selectedTheme;
@@ -183,11 +183,15 @@ class SettingsPageState extends State<SettingsPage> {
       body: ListView(
         children: [
           // Top bar section
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Padding(
                 padding: EdgeInsets.all(16),
-                child: Text("Account Settings", style: theme.textTheme.titleLarge),
+                child: Text(
+                  "Account Settings",
+                  style: theme.textTheme.titleLarge,
+                ),
               ),
               Padding(
                 padding: EdgeInsets.all(16),
@@ -198,13 +202,16 @@ class SettingsPageState extends State<SettingsPage> {
                       while (Navigator.canPop(context)) {
                         Navigator.pop(context);
                       }
-                      Navigator.push(context, MaterialPageRoute(
-                        builder: (context) => LogInPage(),
-                      ));
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => LogInPage()),
+                      );
 
                       widget.availableClasses.clear();
                       widget.selectedClasses.clear();
-                      
+
+                      prefs?.setString("credential-email", "");
+                      prefs?.setString("credential-pass", "");
 
                       showSnackBar(context, "Signed out from current account!");
                     } else {
@@ -212,14 +219,16 @@ class SettingsPageState extends State<SettingsPage> {
                     }
                   },
                   style: ButtonStyle(
-                    backgroundColor: WidgetStateProperty.all(Colors.red)
+                    backgroundColor: WidgetStateProperty.all(Colors.red),
                   ),
-                  child: Text("Sign Out", style: TextStyle(
-                    color: Colors.white
-                  ))
-                )
-              )
-          ]),
+                  child: Text(
+                    "Sign Out",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
 
           // Theme section
           Divider(),
@@ -270,7 +279,7 @@ class SettingsPageState extends State<SettingsPage> {
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               "Select which classes you want to see announcements for:",
-              style: theme.textTheme.bodyMedium
+              style: theme.textTheme.bodyMedium,
             ),
           ),
 
@@ -299,7 +308,8 @@ class SettingsPageState extends State<SettingsPage> {
                         _selectedClasses.isEmpty
                             ? "No classes selected"
                             : _selectedClasses.length == 1
-                            ? (widget.displayClasses[_selectedClasses.first] ?? "")
+                            ? (widget.displayClasses[_selectedClasses.first] ??
+                                "")
                             : "${_selectedClasses.length} classes selected",
                       ),
                     ),
@@ -325,25 +335,42 @@ class SettingsPageState extends State<SettingsPage> {
               ),
               child: Column(
                 children: [
-                  ...["Sec 4", "Sec 3", "Sec 2", "Sec 1"].map((lvl) => Column(children: [
-                    InkWell(
-                      onTap: () {
-                        setState(() {
-                          _isDropdownOpenLvl[lvl] = !(_isDropdownOpenLvl[lvl] ?? false);
-                        });
-                      },
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                        child: Row(children: [
-                          Icon(Icons.class_sharp),
-                          SizedBox(width: 12),
-                          Expanded(child: Text(lvl)),
-                          Icon(_isDropdownOpenLvl[lvl] == true ? Icons.arrow_drop_up : Icons.arrow_drop_down),
-                      ]))
-                    ),
+                  ...["Sec 4", "Sec 3", "Sec 2", "Sec 1"].map(
+                    (lvl) => Column(
+                      children: [
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              _isDropdownOpenLvl[lvl] =
+                                  !(_isDropdownOpenLvl[lvl] ?? false);
+                            });
+                          },
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.class_sharp),
+                                SizedBox(width: 12),
+                                Expanded(child: Text(lvl)),
+                                Icon(
+                                  _isDropdownOpenLvl[lvl] == true
+                                      ? Icons.arrow_drop_up
+                                      : Icons.arrow_drop_down,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
 
-                    ...(_isDropdownOpenLvl[lvl] == true ? getClasses(theme, lvl) : [SizedBox()])
-                  ])),
+                        ...(_isDropdownOpenLvl[lvl] == true
+                            ? getClasses(theme, lvl)
+                            : [SizedBox()]),
+                      ],
+                    ),
+                  ),
 
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),

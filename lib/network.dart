@@ -24,6 +24,7 @@ class NetworkClass {
 List<AnnouncementData> _announcementServer = [];
 List<NetworkClass> _classUser = [];
 List<String> _classServer = [];
+List<String> _formClass = [];
 String getMessageFromErrorCodeAuth(e) {
   switch (e.code) {
     case "account-exists-with-different-credential":
@@ -98,10 +99,18 @@ Future<(bool, String)> firebaseInit([
   String registerNumber = "",
 ]) async {
   try {
+    var database = FirebaseFirestore.instance;
     _announcementServer.clear();
     _classServer.clear();
     _classUser.clear();
+    _formClass.clear();
     if (initApp) {
+      await database.collection("classRegNum").get().then((event) {
+        for (var doc in event.docs) {
+          _formClass.add(doc.id);
+        }
+      });
+
       var accountUnsafe =
           name != null
               ? await registerAccount(
@@ -120,8 +129,6 @@ Future<(bool, String)> firebaseInit([
         return (false, "Unknown error occurred.");
       }
     }
-
-    var database = FirebaseFirestore.instance;
 
     //get all public announcements
     await database.collection("announcements").get().then((event) {
@@ -224,7 +231,6 @@ Future<(bool, String)> firebaseInit([
             }
           }
         });
-
     //removing classes from the user that no longer exists.
     for (var currentclass in _classUser) {
       if (!_classServer.contains(currentclass.name)) {
@@ -237,6 +243,8 @@ Future<(bool, String)> firebaseInit([
             .delete();
       }
     }
+
+    print(_formClass);
   } on FirebaseException catch (e) {
     // Caught an exception from Firebase.
     return (false, getMessageFromErrorCode(e));
@@ -335,7 +343,7 @@ Future<bool> deleteAnnouncementFromServer(AnnouncementData data) async {
 Future<bool> completeAnnouncementInServer(data) async {
   try {
     var database = FirebaseFirestore.instance;
-    final file = database
+    await database
         .collection("users")
         .doc(account.uuid)
         .collection("completed")
@@ -375,10 +383,24 @@ Future<dynamic> registerAccount(
   String clazz,
   String registerNumber,
 ) async {
+  var database = FirebaseFirestore.instance;
   // Initial default session
   Account? currentSession;
 
   try {
+    // Check if an account with the same class and register number exists
+    var checkResult = await checkClassRegisterNumber(clazz, registerNumber);
+
+    // If the checkClassRegisterNumber returns an error message (String), return that message
+    if (checkResult is String) {
+      return checkResult; // Return the error message if there's an issue
+    }
+
+    // Proceed with account registration if the class and register number don't already exist
+    if (checkResult == true) {
+      return "Account with same class and register number exists.";
+    }
+
     // Create user in FirebaseAuth
     await FirebaseAuth.instance.createUserWithEmailAndPassword(
       email: emailAddress,
@@ -390,20 +412,26 @@ Future<dynamic> registerAccount(
     String uuid = (user != null) ? user.uid : "0";
 
     // Store user information in Firestore
-    var database = FirebaseFirestore.instance;
     await database.collection("users").doc(uuid).set({
       "name": name,
       "class": clazz,
       "registernum": registerNumber,
     });
 
+    // Update the class's register number document in Firestore
+    await database.collection("classRegNum").doc(clazz).set({
+      registerNumber:
+          "", // Assuming you're storing the registerNumber under the class document
+    }, SetOptions(merge: true));
+
     // Update current session with the new user details
     currentSession = Account(name: name, email: emailAddress, uuid: uuid);
   } on FirebaseAuthException catch (e) {
+    // Return error message if FirebaseAuthException occurs
     return getMessageFromErrorCodeAuth(e);
   }
 
-  // Return the updated current session
+  // Return the updated current session after successful registration
   return currentSession;
 }
 
@@ -460,4 +488,31 @@ Future<String?> resetPassword(String email) async {
     return getMessageFromErrorCode(e);
   }
   return null;
+}
+
+Future<dynamic> checkClassRegisterNumber(String clazz, String regNum) async {
+  try {
+    var database = FirebaseFirestore.instance;
+    // Iterate through the _formClass list to check if the clazz matches
+    for (String currClass in _formClass) {
+      if (currClass == clazz) {
+        // Fetch the document from the Firestore collection
+        var docSnapshot =
+            await database.collection("classRegNum").doc(currClass).get();
+
+        // Check if the document exists and contains the regNum key
+        if (docSnapshot.exists) {
+          Map<String, dynamic>? content = docSnapshot.data();
+          return content?.containsKey(regNum) ??
+              false; // Return true if regNum exists, false otherwise
+        } else {
+          return "Class does not exist."; // If the document doesn't exist, return false
+        }
+      }
+    }
+    return "Class does not exist."; // If the clazz isn't found in _formClass, return false
+  } on FirebaseException catch (e) {
+    // Handle Firebase-specific errors
+    return getMessageFromErrorCode(e);
+  }
 }

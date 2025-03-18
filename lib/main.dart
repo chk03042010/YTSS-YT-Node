@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:ytsync/firebase_options.dart';
 import 'package:ytsync/network.dart';
+import 'package:ytsync/pages/homepage.dart';
 import 'package:ytsync/pages/login.dart';
 import 'package:ytsync/util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,12 +11,23 @@ late MyAppState appState;
 SharedPreferences? prefs;
 late Account account;
 
+bool loggedIn = false;
+
 void main() async {
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   prefs = await SharedPreferences.getInstance();
+
+  if ((prefs?.getString("credential-email") ?? "") != "") {
+    if ((await firebaseInit(
+      true,
+      prefs?.getString("credential-email") ?? "",
+      (prefs?.getString("credential-pass") ?? ""),
+    )).$1) {
+      loggedIn = true;
+    }
+  }
+
   runApp(MyApp());
 }
 
@@ -107,7 +119,9 @@ class MyAppState extends State<MyApp> {
     themeData =
         appThemeMap[selectedTheme] ?? (ThemeMode.light, ThemeData.light());
 
-    passwordTime = DateTime.fromMicrosecondsSinceEpoch(prefs?.getInt("passwordForgetTime") ?? 0);
+    passwordTime = DateTime.fromMicrosecondsSinceEpoch(
+      prefs?.getInt("passwordForgetTime") ?? 0,
+    );
 
     appState = this;
   }
@@ -164,7 +178,7 @@ class MyAppState extends State<MyApp> {
       theme: themeData.$2,
       darkTheme: appThemeMap["dark"]?.$2 ?? ThemeData.dark(),
       themeMode: themeData.$1, //custom theme mode
-      home: LogInPage(),
+      home: loggedIn ? HomePage() : LogInPage(),
     );
   }
 }
