@@ -116,8 +116,6 @@ class SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    print(widget.availableClasses);
-
     return Scaffold(
       appBar: AppBar(
         title: Text("Settings"),

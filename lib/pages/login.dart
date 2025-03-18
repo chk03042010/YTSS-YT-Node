@@ -261,7 +261,13 @@ class LogInPageState extends State<LogInPage> {
                               }
 
                               if (!loginPage) {
-                                if (int.tryParse(_classText.text[0]) == null ||
+                                if (_classText.text.isEmpty) {
+                                  showSnackBar(
+                                    context,
+                                    "Please fill in your form class.",
+                                  );
+                                  return;
+                                } else if (int.tryParse(_classText.text[0]) == null ||
                                     !RegExp(
                                       r'[a-zA-Z]',
                                     ).hasMatch(_classText.text[1])) {

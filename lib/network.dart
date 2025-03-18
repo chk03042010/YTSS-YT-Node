@@ -243,8 +243,6 @@ Future<(bool, String)> firebaseInit([
             .delete();
       }
     }
-
-    print(_formClass);
   } on FirebaseException catch (e) {
     // Caught an exception from Firebase.
     return (false, getMessageFromErrorCode(e));
@@ -398,7 +396,7 @@ Future<dynamic> registerAccount(
 
     // Proceed with account registration if the class and register number don't already exist
     if (checkResult == true) {
-      return "Account with same class and register number exists.";
+      return "Account with the same class and register number exists. Please log in or press 'forgot password' if you have forgotten your password.";
     }
 
     // Create user in FirebaseAuth
@@ -506,11 +504,11 @@ Future<dynamic> checkClassRegisterNumber(String clazz, String regNum) async {
           return content?.containsKey(regNum) ??
               false; // Return true if regNum exists, false otherwise
         } else {
-          return "Class does not exist."; // If the document doesn't exist, return false
+          return "Class does not exist. ($clazz)"; // If the document doesn't exist, return false
         }
       }
     }
-    return "Class does not exist."; // If the clazz isn't found in _formClass, return false
+    return "Class does not exist. ($clazz)"; // If the clazz isn't found in _formClass, return false
   } on FirebaseException catch (e) {
     // Handle Firebase-specific errors
     return getMessageFromErrorCode(e);
