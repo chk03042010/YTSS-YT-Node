@@ -1,27 +1,136 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter_application_1/firebase_options.dart';
-import 'package:flutter_application_1/pages/placeholder.dart';
-import 'package:flutter_application_1/main.dart';
-import 'package:flutter_application_1/util.dart';
+import 'package:ytsync/firebase_options.dart';
+import 'package:ytsync/pages/placeholder.dart';
+import 'package:ytsync/main.dart';
+import 'package:ytsync/util.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
+import 'package:firebase_auth/firebase_auth.dart';
 
-List<AnnouncementData> _announcements = [];
-List<(String, bool)> _classes = [];
-List<String> _classeslookup = [];
-Future<bool> firebaseInit() async {
-  //receive announcements and classes here
-  //initialise account, get public and personal announcements, and classes
-  //TODO: remove classes when not in classes collection
-  account =
-      createAccount(); //TODO: remove after setting account in firebaseinit
+class NetworkClass {
+  String name;
+  bool selected;
 
+  NetworkClass(this.name, this.selected);
+
+  @override
+  bool operator ==(Object other) =>
+      other is NetworkClass && other.hashCode == hashCode;
+
+  @override
+  int get hashCode => name.hashCode;
+}
+
+List<AnnouncementData> _announcementServer = [];
+List<NetworkClass> _classUser = [];
+List<String> _classServer = [];
+List<String> _formClass = [];
+String getMessageFromErrorCodeAuth(e) {
+  switch (e.code) {
+    case "account-exists-with-different-credential":
+    case "email-already-in-use":
+      return "Email already used. Please go to the login page.";
+    case "wrong-password":
+      return "Wrong email/password combination.";
+    case "user-not-found":
+      return "No user found with this email.";
+    case "user-disabled":
+      return "User disabled.";
+    case "too-many=requests":
+      return "Too many requests to log into this account.";
+    case "operation-not-allowed":
+      return "Server error, please try again later.";
+    case "invalid-email":
+      return "Email address is invalid.";
+    case "weak-password":
+      return "";
+    case "expired-action-code":
+      return "";
+    case "invalid-action-code":
+      return "";
+    default:
+      return "Something went wrong. Please try again.";
+  }
+}
+
+String getMessageFromErrorCode(e) {
+  switch (e.code) {
+    case "aborted":
+      return "Error: Connection Aborted.";
+    case "already-exists":
+      return "";
+    case "cancelled":
+      return "";
+    case "data-loss":
+      return "";
+    case "deadline-exceeded":
+      return "";
+    case "failed-precondition":
+      return "";
+    case "internal":
+      return "";
+    case "invalid-argument":
+      return "";
+    case "not-found":
+      return "";
+    case "out-of-range":
+      return "";
+    case "permission-denied":
+      return "";
+    case "resource-exhausted":
+      return "";
+    case "unauthenticated":
+      return "";
+    case "unavailable":
+      return "";
+    case "unimplemented":
+      return "";
+    default:
+      return "";
+  }
+}
+
+Future<(bool, String)> firebaseInit([
+  bool initApp = true,
+  String email = "",
+  String password = "",
+  String? name,
+  String clazz = "",
+  String registerNumber = "",
+]) async {
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-
     var database = FirebaseFirestore.instance;
+    _announcementServer.clear();
+    _classServer.clear();
+    _classUser.clear();
+    _formClass.clear();
+    if (initApp) {
+      await database.collection("classRegNum").get().then((event) {
+        for (var doc in event.docs) {
+          _formClass.add(doc.id);
+        }
+      });
+
+      var accountUnsafe =
+          name != null
+              ? await registerAccount(
+                email,
+                password,
+                name,
+                clazz,
+                registerNumber,
+              )
+              : await signIn(email, password);
+      if (accountUnsafe is String) {
+        return (false, accountUnsafe);
+      } else if (accountUnsafe is Account) {
+        account = accountUnsafe;
+      } else {
+        return (false, "Unknown error occurred.");
+      }
+    }
+
+    //get all public announcements
     await database.collection("announcements").get().then((event) {
       for (var doc in event.docs) {
         Map<String, dynamic> content = doc.data();
@@ -36,6 +145,7 @@ Future<bool> firebaseInit() async {
         );
         data.setId(content["id"]);
 
+        //check if user has completed it
         database
             .collection("users")
             .doc(account.uuid)
@@ -44,15 +154,17 @@ Future<bool> firebaseInit() async {
             .get()
             .then((item) {
               final content2 = item.data();
-              if (content2!["isCompleted"]) {
+              if (content2 != null && content2["isCompleted"]) {
                 data.complete(true);
               }
             });
 
         //read if annc is complete, if it is call this function
-        _announcements.add(data);
+        _announcementServer.add(data);
       }
     });
+
+    //get all private announcements
     await database
         .collection("users")
         .doc(account.uuid)
@@ -72,6 +184,7 @@ Future<bool> firebaseInit() async {
             );
             data.setId(content["id"]);
 
+            //check if private announcement is completed
             database
                 .collection("users")
                 .doc(account.uuid)
@@ -80,34 +193,28 @@ Future<bool> firebaseInit() async {
                 .get()
                 .then((item) {
                   final content2 = item.data();
-                  if (content2!["isCompleted"]) {
+                  if (content2 != null && content2["isCompleted"]) {
                     data.complete(true);
                   }
                 });
 
             //read if annc is complete, if it is call this function
-            _announcements.add(data);
+            _announcementServer.add(data);
           }
         });
-    //${sec4/3/2/1} ${g3/g2/g1} ${class name}
-    await database.collection("classes").doc("sec4").get().then((item) {
-      Map<String, dynamic>? content = item.data();
-      _classeslookup = content!.keys.toList();
-      // for (var minidoc in item) {
-      //   print(minidoc.id);
-      //   database
-      //       .collection("classes")
-      //       .doc("sec4")
-      //       .collection(minidoc.id)
-      //       .get()
-      //       .then((event) {
-      //         for (var content in event.docs) {
-      //           _classeslookup.add(content.id);
-      //           print(content.id);
-      //         }
-      //       });
-      // }
-    });
+
+    //class name format: ${Sec 4/3/2/1} ${class name}
+    for (String level in ["Sec 4", "Sec 3", "Sec 2", "Sec 1"]) {
+      await database.collection("classes").doc(level).get().then((item) {
+        Map<String, dynamic>? content = item.data();
+        for (String name in (content?.keys.toList() ?? [])) {
+          _classServer.add("$level $name");
+          _classUser.add(NetworkClass("$level $name", false));
+        }
+      });
+    }
+
+    //get selected classes
     await database
         .collection("users")
         .doc(account.uuid)
@@ -116,36 +223,32 @@ Future<bool> firebaseInit() async {
         .then((item) {
           for (var minidoc in item.docs) {
             Map<String, dynamic> content = minidoc.data();
-            _classes.add((minidoc.id, content["isselected"]));
+            if (!_classUser.contains(NetworkClass(minidoc.id, false))) {
+              _classUser.add(NetworkClass(minidoc.id, content["isselected"]));
+            } else if (content["isselected"]) {
+              _classUser[_classUser.indexOf(NetworkClass(minidoc.id, false))]
+                  .selected = content["isselected"];
+            }
           }
         });
-    for (var currentclass in _classeslookup) {
-      if (!_classes.contains((currentclass, false)) &&
-          !_classes.contains((currentclass, true))) {
-        _classes.add((currentclass, false));
-      }
-    }
-    for (var currentclass in _classes) {
-      if (!_classeslookup.contains(currentclass.$1)) {
-        _classes.remove(currentclass);
+    //removing classes from the user that no longer exists.
+    for (var currentclass in _classUser) {
+      if (!_classServer.contains(currentclass.name)) {
+        _classUser.remove(currentclass);
         database
             .collection("users")
             .doc(account.uuid)
             .collection("classes")
-            .doc(currentclass.$1)
+            .doc(currentclass.name)
             .delete();
       }
     }
   } on FirebaseException catch (e) {
     // Caught an exception from Firebase.
-    print("Failed with error '${e.code}': ${e.message}");
-    switch (e.code) {
-      default:
-    }
-    return false;
+    return (false, getMessageFromErrorCode(e));
   }
 
-  return true;
+  return (true, "");
 }
 
 Future<bool> sendAnnouncementToServer(
@@ -153,9 +256,6 @@ Future<bool> sendAnnouncementToServer(
   bool isPublic,
 ) async {
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
     var database = FirebaseFirestore.instance;
     data.setId(Random().nextInt(1 << 16));
     if (isPublic) {
@@ -168,6 +268,7 @@ Future<bool> sendAnnouncementToServer(
         "id": data.getId(),
         "title": data.getTitle(),
       });
+
       await database
           .collection("users")
           .doc(account.uuid)
@@ -189,6 +290,7 @@ Future<bool> sendAnnouncementToServer(
             "id": data.getId(),
             "title": data.getTitle(),
           });
+
       await database
           .collection("users")
           .doc(account.uuid)
@@ -198,18 +300,14 @@ Future<bool> sendAnnouncementToServer(
     }
   } on FirebaseException catch (e) {
     // Caught an exception from Firebase.
-    print("Failed with error '${e.code}': ${e.message}");
-    switch (e.code) {
-      default:
-    }
+    getMessageFromErrorCode(e);
     return false;
   }
   return true;
 }
 
 List<AnnouncementData>? receiveAnnouncementFromServer() {
-  //return the announcement received from init here
-  return _announcements; //getAnnouncementsPlaceholder(); //TODO placeholder
+  return _announcementServer;
 }
 
 Future<bool> deleteAnnouncementFromServer(AnnouncementData data) async {
@@ -217,6 +315,7 @@ Future<bool> deleteAnnouncementFromServer(AnnouncementData data) async {
     var database = FirebaseFirestore.instance;
     if (data.isPublic()) {
       database.collection("announcements").doc(data.getChecksum()).delete();
+      //TODO: use Cloud Functions to delete all users' announcements
     } else {
       database
           .collection("users")
@@ -225,6 +324,7 @@ Future<bool> deleteAnnouncementFromServer(AnnouncementData data) async {
           .doc(data.getChecksum())
           .delete();
     }
+
     database
         .collection("users")
         .doc(account.uuid)
@@ -232,63 +332,185 @@ Future<bool> deleteAnnouncementFromServer(AnnouncementData data) async {
         .doc(data.getChecksum())
         .delete();
   } on FirebaseException catch (e) {
-    // Caught an exception from Firebase.
-    print("Failed with error '${e.code}': ${e.message}");
-    switch (e.code) {
-      default:
-    }
+    getMessageFromErrorCode(e);
     return false;
   }
   return true;
 }
 
 Future<bool> completeAnnouncementInServer(data) async {
-  //completion is personal a.k.a synced to each uuid, NOT public class.
   try {
     var database = FirebaseFirestore.instance;
-    final file = database
+    await database
         .collection("users")
         .doc(account.uuid)
         .collection("completed")
-        .doc(data.getChecksum());
-
-    file.update({"isCompleted": true});
+        .doc(data.getChecksum())
+        .set({"isCompleted": true});
   } on FirebaseException catch (e) {
-    // Caught an exception from Firebase.
-    print("Failed with error '${e.code}': ${e.message}");
-    switch (e.code) {
-      default:
-    }
+    getMessageFromErrorCode(e);
     return false;
   }
   return true;
 }
 
-Future<bool> changeSelectedClassesInServer(
-  String classes,
-  bool selected,
-) async {
+Future<bool> changeSelectedClassesInServer(String clazz, bool selected) async {
   try {
     var database = FirebaseFirestore.instance;
     final file = database
         .collection("users")
         .doc(account.uuid)
         .collection("classes")
-        .doc(classes);
+        .doc(clazz);
     file.set({"isselected": selected});
   } on FirebaseException catch (e) {
-    // Caught an exception from Firebase.
-    print("Failed with error '${e.code}': ${e.message}");
-    switch (e.code) {
-      default:
-    }
+    getMessageFromErrorCode(e);
     return false;
   }
   return true;
 }
 
-List<(String, bool)> receiveClassesFromServer() {
-  //return the classes received from init here
-  return _classes;
-  //return getClassesPlaceholder();
+List<NetworkClass> receiveClassesFromServer() {
+  return _classUser;
+}
+
+Future<dynamic> registerAccount(
+  String emailAddress,
+  String password,
+  String name,
+  String clazz,
+  String registerNumber,
+) async {
+  var database = FirebaseFirestore.instance;
+  // Initial default session
+  Account? currentSession;
+
+  try {
+    // Check if an account with the same class and register number exists
+    var checkResult = await checkClassRegisterNumber(clazz, registerNumber);
+
+    // If the checkClassRegisterNumber returns an error message (String), return that message
+    if (checkResult is String) {
+      return checkResult; // Return the error message if there's an issue
+    }
+
+    // Proceed with account registration if the class and register number don't already exist
+    if (checkResult == true) {
+      return "Account with the same class and register number exists. Please log in or press 'forgot password' if you have forgotten your password.";
+    }
+
+    // Create user in FirebaseAuth
+    await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      email: emailAddress,
+      password: password,
+    );
+
+    // Get the current authenticated user
+    User? user = FirebaseAuth.instance.currentUser;
+    String uuid = (user != null) ? user.uid : "0";
+
+    // Store user information in Firestore
+    await database.collection("users").doc(uuid).set({
+      "name": name,
+      "class": clazz,
+      "registernum": registerNumber,
+    });
+
+    // Update the class's register number document in Firestore
+    await database.collection("classRegNum").doc(clazz).set({
+      registerNumber:
+          "", // Assuming you're storing the registerNumber under the class document
+    }, SetOptions(merge: true));
+
+    // Update current session with the new user details
+    currentSession = Account(name: name, email: emailAddress, uuid: uuid);
+  } on FirebaseAuthException catch (e) {
+    // Return error message if FirebaseAuthException occurs
+    return getMessageFromErrorCodeAuth(e);
+  }
+
+  // Return the updated current session after successful registration
+  return currentSession;
+}
+
+Future<dynamic> signIn(String emailAddress, String password) async {
+  var currentSession = Account(name: "guest", email: "guest", uuid: "0");
+
+  try {
+    // Sign in with Firebase Authentication
+    await FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: emailAddress,
+      password: password,
+    );
+
+    String name = "", uuid = "0";
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      uuid = user.uid;
+      var database = FirebaseFirestore.instance;
+
+      // Await the result from Firestore to ensure the name is fetched before continuing
+      var docSnapshot = await database.collection("users").doc(uuid).get();
+      if (docSnapshot.exists) {
+        Map<String, dynamic>? content = docSnapshot.data();
+        name =
+            content?["name"] ??
+            "guest"; // Ensure name is safely fetched, default to "guest"
+      }
+    }
+
+    // Update currentSession with fetched data
+    currentSession = Account(name: name, email: emailAddress, uuid: uuid);
+  } on FirebaseAuthException catch (e) {
+    return getMessageFromErrorCodeAuth(e);
+  }
+
+  return currentSession;
+}
+
+Future<String?> signOut() async {
+  try {
+    await FirebaseAuth.instance.signOut();
+  } on FirebaseAuthException catch (e) {
+    return getMessageFromErrorCodeAuth(e);
+  }
+  return null;
+}
+
+Future<String?> resetPassword(String email) async {
+  try {
+    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+  } on FirebaseAuthException catch (e) {
+    return getMessageFromErrorCodeAuth(e);
+  } on FirebaseException catch (e) {
+    return getMessageFromErrorCode(e);
+  }
+  return null;
+}
+
+Future<dynamic> checkClassRegisterNumber(String clazz, String regNum) async {
+  try {
+    var database = FirebaseFirestore.instance;
+    // Iterate through the _formClass list to check if the clazz matches
+    for (String currClass in _formClass) {
+      if (currClass == clazz) {
+        // Fetch the document from the Firestore collection
+        var docSnapshot =
+            await database.collection("classRegNum").doc(currClass).get();
+
+        // Check if the document exists and contains the regNum key
+        if (docSnapshot.exists) {
+          Map<String, dynamic>? content = docSnapshot.data();
+          return content?.containsKey(regNum) ??
+              false; // Return true if regNum exists, false otherwise
+        } else {
+          return "Class does not exist. ($clazz)"; // If the document doesn't exist, return false
+        }
+      }
+    }
+    return "Class does not exist. ($clazz)"; // If the clazz isn't found in _formClass, return false
+  } on FirebaseException catch (e) {
+    // Handle Firebase-specific errors
+    return getMessageFromErrorCode(e);
+  }
 }

@@ -1,20 +1,23 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/network.dart';
-import 'package:flutter_application_1/util.dart';
-import '../main.dart';
+import 'package:ytsync/network.dart';
+import 'package:ytsync/pages/login.dart';
+import 'package:ytsync/util.dart';
+import 'package:ytsync/main.dart';
 
 class SettingsPage extends StatefulWidget {
-  final Function(bool) onLoginToggle;
   final List<String> availableClasses;
   final List<String> selectedClasses;
+  final HashMap<String, String> displayClasses;
   final Function(String, bool?) onClassToggle;
   final Function(List<String>) onMultipleClassSelect;
 
   const SettingsPage({
     super.key,
-    required this.onLoginToggle,
     required this.availableClasses,
     required this.selectedClasses,
+    required this.displayClasses,
     required this.onClassToggle,
     required this.onMultipleClassSelect,
   });
@@ -25,7 +28,14 @@ class SettingsPage extends StatefulWidget {
 
 class SettingsPageState extends State<SettingsPage> {
   List<String> _selectedClasses = [];
+  final HashSet<String> _classesChanged = HashSet<String>();
   bool _isDropdownOpen = false;
+  final Map<String, bool> _isDropdownOpenLvl = {
+    "Sec4": false,
+    "Sec3": false,
+    "Sec2": false,
+    "Sec1": false,
+  };
 
   String _newTheme = appState.selectedTheme;
   String _oldTheme = "";
@@ -51,13 +61,55 @@ class SettingsPageState extends State<SettingsPage> {
     changeAppTheme(_newTheme, widget, this);
   }
 
-  void saveChanges() {
+  void revertChanges() async {
+    _classesChanged.clear();
+  }
+
+  void saveChanges() async {
     widget.onMultipleClassSelect(_selectedClasses);
+
     changeAppTheme(_newTheme, widget, this);
     Navigator.pop(context);
     appSaveToPref();
 
     showSnackBar(context, "Settings Saved!");
+
+    for (String className in _classesChanged) {
+      if (_selectedClasses.contains(className)) {
+        await changeSelectedClassesInServer(className, true);
+        //TODO: add exception handle
+      } else {
+        await changeSelectedClassesInServer(className, false);
+      }
+    }
+    _classesChanged.clear();
+  }
+
+  Iterable<dynamic> getClasses(theme, lvl) {
+    return widget.availableClasses.map((className) {
+      if (className.startsWith(lvl)) {
+        return CheckboxListTile(
+          title: Text(widget.displayClasses[className] ?? ""),
+          value: _selectedClasses.contains(className),
+          onChanged: (bool? value) async {
+            _isChangesMade = true;
+            _classesChanged.add(className);
+
+            setState(() {
+              if (value == true) {
+                _selectedClasses.add(className);
+              } else {
+                _selectedClasses.remove(className);
+              }
+            });
+          },
+          activeColor: theme.primaryColor,
+          dense: true,
+        );
+      } else {
+        return SizedBox();
+      }
+    });
   }
 
   @override
@@ -92,6 +144,7 @@ class SettingsPageState extends State<SettingsPage> {
                     actions: [
                       TextButton(
                         onPressed: () {
+                          revertChanges();
                           changeAppTheme(_oldTheme, widget, this);
                           Navigator.pop(context);
                           Navigator.pop(context);
@@ -128,23 +181,51 @@ class SettingsPageState extends State<SettingsPage> {
       body: ListView(
         children: [
           // Top bar section
-          Padding(
-            padding: EdgeInsets.all(16),
-            child: Text("Account Settings", style: theme.textTheme.titleLarge),
-          ),
-          StatefulBuilder(
-            builder: (BuildContext context, StateSetter stateSetter) {
-              return SwitchListTile(
-                title: Text("Logged In"),
-                subtitle: Text("Toggle to enable adding announcements"),
-                value: appState.isLoggedIn,
-                onChanged: (val) {
-                  stateSetter(() => appState.isLoggedIn = val);
-                  widget.onLoginToggle(val);
-                },
-                activeColor: theme.primaryColor,
-              );
-            },
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  "Account Settings",
+                  style: theme.textTheme.titleLarge,
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: TextButton(
+                  onPressed: () async {
+                    String? msg = await signOut();
+                    if (msg == null && context.mounted) {
+                      while (Navigator.canPop(context)) {
+                        Navigator.pop(context);
+                      }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => LogInPage()),
+                      );
+
+                      widget.availableClasses.clear();
+                      widget.selectedClasses.clear();
+
+                      prefs?.setString("credential-email", "");
+                      prefs?.setString("credential-pass", "");
+
+                      showSnackBar(context, "Signed out from current account!");
+                    } else {
+                      showSnackBar(context, msg);
+                    }
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.all(Colors.red),
+                  ),
+                  child: Text(
+                    "Sign Out",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
           ),
 
           // Theme section
@@ -196,9 +277,7 @@ class SettingsPageState extends State<SettingsPage> {
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               "Select which classes you want to see announcements for:",
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[700],
-              ),
+              style: theme.textTheme.bodyMedium,
             ),
           ),
 
@@ -227,7 +306,8 @@ class SettingsPageState extends State<SettingsPage> {
                         _selectedClasses.isEmpty
                             ? "No classes selected"
                             : _selectedClasses.length == 1
-                            ? _selectedClasses.first
+                            ? (widget.displayClasses[_selectedClasses.first] ??
+                                "")
                             : "${_selectedClasses.length} classes selected",
                       ),
                     ),
@@ -253,32 +333,43 @@ class SettingsPageState extends State<SettingsPage> {
               ),
               child: Column(
                 children: [
-                  ...widget.availableClasses.map((className) {
-                    return CheckboxListTile(
-                      title: Text(className),
-                      value: _selectedClasses.contains(className),
-                      onChanged: (bool? value) async {
-                        _isChangesMade = true;
+                  ...["Sec 4", "Sec 3", "Sec 2", "Sec 1"].map(
+                    (lvl) => Column(
+                      children: [
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              _isDropdownOpenLvl[lvl] =
+                                  !(_isDropdownOpenLvl[lvl] ?? false);
+                            });
+                          },
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.class_sharp),
+                                SizedBox(width: 12),
+                                Expanded(child: Text(lvl)),
+                                Icon(
+                                  _isDropdownOpenLvl[lvl] == true
+                                      ? Icons.arrow_drop_up
+                                      : Icons.arrow_drop_down,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
 
-                        if (value == true) {
-                          await changeSelectedClassesInServer(className, true);
-                          //TODO: add exception handle
-                        } else {
-                          await changeSelectedClassesInServer(className, false);
-                        }
+                        ...(_isDropdownOpenLvl[lvl] == true
+                            ? getClasses(theme, lvl)
+                            : [SizedBox()]),
+                      ],
+                    ),
+                  ),
 
-                        setState(() {
-                          if (value == true) {
-                            _selectedClasses.add(className);
-                          } else {
-                            _selectedClasses.remove(className);
-                          }
-                        });
-                      },
-                      activeColor: theme.primaryColor,
-                      dense: true,
-                    );
-                  }),
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Row(

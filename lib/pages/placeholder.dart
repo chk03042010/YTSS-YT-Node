@@ -1,12 +1,11 @@
-import 'package:flutter_application_1/main.dart';
-import 'package:flutter_application_1/util.dart';
+import 'package:ytsync/main.dart';
+import 'package:ytsync/util.dart';
 
 Account createAccount() {
   return Account(
     email: "felix@yay.com",
     name: "Felix",
     uuid: "cbJ31YQ4RtNjgBDFdcEBsU30AhX2",
-    level: 4,
   );
 }
 

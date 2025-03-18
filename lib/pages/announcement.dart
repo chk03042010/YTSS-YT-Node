@@ -1,18 +1,22 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/main.dart';
-import 'package:flutter_application_1/pages/homepage.dart';
+import 'package:ytsync/main.dart';
+import 'package:ytsync/pages/homepage.dart';
 import '../util.dart';
 
 class AddAnnouncementPage extends StatefulWidget {
   final HomePageState homePageState;
   final List<String> availableClasses;
   final List<String> selectedClasses;
+  final HashMap<String, String> displayClasses;
 
   const AddAnnouncementPage({
     super.key,
     required this.homePageState,
     required this.availableClasses,
     required this.selectedClasses,
+    required this.displayClasses,
   });
 
   @override
@@ -65,7 +69,7 @@ class AddAnnouncementPageState extends State<AddAnnouncementPage> {
                     classOptions.map((className) {
                       return DropdownMenuItem(
                         value: className,
-                        child: Text(className),
+                        child: Text(widget.displayClasses[className] ?? ""),
                       );
                     }).toList(),
 
@@ -133,7 +137,7 @@ class AddAnnouncementPageState extends State<AddAnnouncementPage> {
                     value: isPublic,
                     onChanged: (bool? value) {
                       setState(() {
-                        isPublic = value!;
+                        isPublic = value ?? false;
                       });
                     },
                   ),

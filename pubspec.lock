@@ -9,6 +9,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.3.53"
+  animate_gradient:
+    dependency: "direct main"
+    description:
+      name: animate_gradient
+      sha256: "4aabcefe775f4654640fa1b1012317b8c8309207895cfda3b4368839e4ba696c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.3"
+  animated_text_kit:
+    dependency: "direct main"
+    description:
+      name: animated_text_kit
+      sha256: adba517adb7e6adeb1eb5e1c8a147dd7bc664dfdf2f5e92226b572a91393a93d
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.2.3"
   async:
     dependency: transitive
     description:
@@ -461,6 +477,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.4"
+  timer_button:
+    dependency: "direct main"
+    description:
+      name: timer_button
+      sha256: e1c3debf93a14412c83ad485f8bdb1cc347871521c544606e72c4148edc18ca3
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.1"
   typed_data:
     dependency: transitive
     description:

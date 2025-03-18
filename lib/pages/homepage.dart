@@ -1,8 +1,9 @@
+import 'dart:collection';
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/network.dart';
-import 'package:flutter_application_1/pages/homepage_widget.dart';
+import 'package:ytsync/network.dart';
+import 'package:ytsync/pages/homepage_widget.dart';
+import 'package:timer_button/timer_button.dart';
 import './settings.dart';
-import './placeholder.dart';
 import 'announcement.dart';
 import '../util.dart';
 import '../main.dart';
@@ -19,6 +20,8 @@ class HomePageState extends State<HomePage> {
   late List<AnnouncementData> announcements;
   List<String> selectedClasses = [];
   List<String> availableClasses = [];
+  HashMap<String, String> displayClasses =
+      HashMap<String, String>(); //actual name, display name
 
   //filter category
   bool showCompleted = true;
@@ -27,22 +30,32 @@ class HomePageState extends State<HomePage> {
   bool showPublic = true;
 
   HomePageState() {
+    homepageInit();
+  }
+
+  void homepageInit() {
     announcements = receiveAnnouncementFromServer() ?? [];
     announcements.sort(AnnouncementData.sortFunction);
 
     var classes = receiveClassesFromServer();
-    for (var (clazz, selected) in classes) {
+    for (var entry in classes) {
+      var clazz = entry.name;
+      var selected = entry.selected;
+
       availableClasses.add(clazz);
+      displayClasses[clazz] =
+          clazz
+              .replaceAll("Sec 4", "")
+              .replaceAll("Sec 3", "")
+              .replaceAll("Sec 2", "")
+              .replaceAll("Sec 1", "")
+              .trimLeft();
       if (selected) {
         selectedClasses.add(clazz);
       }
     }
-  }
-
-  void _toggleLogin(bool value) {
-    setState(() {
-      appState.isLoggedIn = value;
-    });
+    availableClasses.sort();
+    selectedClasses.sort();
   }
 
   void _toggleClassSelection(String className, bool? value) {
@@ -102,9 +115,9 @@ class HomePageState extends State<HomePage> {
     return MaterialPageRoute(
       builder:
           (context) => SettingsPage(
-            onLoginToggle: _toggleLogin,
             availableClasses: availableClasses,
             selectedClasses: selectedClasses,
+            displayClasses: displayClasses,
             onClassToggle: _toggleClassSelection,
             onMultipleClassSelect: _setSelectedClasses,
           ),
@@ -158,7 +171,7 @@ class HomePageState extends State<HomePage> {
                         TableRow(
                           children: [
                             Text(
-                              "Show Uncompleted",
+                              "Show Incomplete",
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 20.0,
@@ -238,8 +251,24 @@ class HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    refreshFunc() async {
+      selectedClasses.clear();
+      availableClasses.clear();
+      displayClasses.clear();
+      announcements.clear();
+
+      await firebaseInit(false);
+
+      setState(() {
+        homepageInit();
+
+        showSnackBar(context, "Refreshed Page.");
+      });
+    }
+
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Text(
           "Announcements",
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -250,10 +279,49 @@ class HomePageState extends State<HomePage> {
         padding: EdgeInsets.all(16.0),
         child: Column(
           children: [
-            IconButton(
-              icon: Icon(Icons.filter_alt_outlined),
-              tooltip: "Pick a filter to categorise the announcements.",
-              onPressed: () => showFilterPopup(context),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.filter_alt_outlined),
+                  tooltip: "Pick a filter to categorise the announcements.",
+                  onPressed: () => showFilterPopup(context),
+                ),
+                Row(
+                  children: [
+                    Icon(Icons.refresh_outlined),
+                    TimerButton.builder(
+                      onPressed: refreshFunc,
+                      builder: (context, timeLeft) {
+                        return MouseRegion(
+                          cursor:
+                              timeLeft >= 0
+                                  ? DefaultMouseCursor()
+                                  : SystemMouseCursors.click,
+                          child:
+                              timeLeft >= 0
+                                  ? Text(
+                                    "Refresh (${timeLeft}s)",
+                                    style: theme.textTheme.labelLarge,
+                                  )
+                                  : Text(
+                                    "Refresh",
+                                    style: theme.textTheme.labelLarge?.copyWith(
+                                      color:
+                                          appState
+                                              .themeData
+                                              .$2
+                                              .colorScheme
+                                              .secondary,
+                                    ),
+                                  ),
+                        );
+                      },
+                      timeOutInSeconds: 60,
+                    ),
+                  ],
+                ),
+              ],
             ),
 
             Divider(),
@@ -267,10 +335,10 @@ class HomePageState extends State<HomePage> {
                           style: theme.textTheme.titleMedium,
                         ),
                       )
-                      //uncompleted ones at the top
-                      : createAnnouncementList(
+                      : (createAnnouncementList(
                         announcements,
                         selectedClasses,
+                        displayClasses,
                         showUncompleted,
                         showCompleted,
                         showPersonal,
@@ -279,7 +347,7 @@ class HomePageState extends State<HomePage> {
                         context,
                         setState,
                         removeAnnouncement,
-                      ),
+                      )),
             ),
           ],
         ),
@@ -296,7 +364,7 @@ class HomePageState extends State<HomePage> {
         onTap: (index) {
           if (index == 0) {
             // Add
-            if (appState.isLoggedIn) {
+            if (selectedClasses.isNotEmpty) {
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -305,6 +373,7 @@ class HomePageState extends State<HomePage> {
                         homePageState: this,
                         availableClasses: availableClasses,
                         selectedClasses: selectedClasses,
+                        displayClasses: displayClasses,
                       ),
                 ),
               );
@@ -313,9 +382,9 @@ class HomePageState extends State<HomePage> {
                 context: context,
                 builder:
                     (context) => AlertDialog(
-                      title: Text("Sign in Required"),
+                      title: Text("No classes selected."),
                       content: Text(
-                        "You need to be signed in to add announcements.",
+                        "Please select at least one class to continue.",
                       ),
                       actions: [
                         TextButton(
