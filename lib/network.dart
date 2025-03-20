@@ -354,6 +354,22 @@ Future<bool> completeAnnouncementInServer(data) async {
   return true;
 }
 
+Future<bool> uncompleteAnnouncementInServer(data) async {
+  try {
+    var database = FirebaseFirestore.instance;
+    await database
+        .collection("users")
+        .doc(account.uuid)
+        .collection("completed")
+        .doc(data.getChecksum())
+        .update({"isCompleted": false});
+  } on FirebaseException catch (e) {
+    getMessageFromErrorCode(e);
+    return false;
+  }
+  return true;
+}
+
 Future<bool> changeSelectedClassesInServer(String clazz, bool selected) async {
   try {
     var database = FirebaseFirestore.instance;
